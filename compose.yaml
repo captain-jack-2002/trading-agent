@@ -1,0 +1,58 @@
+# Local, paper-only sandbox. No real credentials; backend services are not published.
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      TRADING_EXECUTION_MODE: paper
+      TRADING_DATABASE_URL: postgresql+psycopg://paper@postgres:5432/paper
+      TRADING_VALKEY_URL: redis://valkey:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    networks: [paper]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+  postgres:
+    image: docker.io/library/postgres:17-alpine
+    environment:
+      POSTGRES_DB: paper
+      POSTGRES_USER: paper
+      # Trust is confined to this internal disposable paper sandbox, never production.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    networks: [paper]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U paper -d paper"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  valkey:
+    image: docker.io/valkey/valkey:8-alpine
+    command: [valkey-server, --appendonly, "yes"]
+    networks: [paper]
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: [CMD, valkey-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+networks:
+  paper:
+    internal: true
+volumes:
+  postgres_data:
+  valkey_data:
