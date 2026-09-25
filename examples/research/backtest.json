@@ -1,0 +1,16 @@
+{
+  "risk": {},
+  "simulation": {
+    "bar_seconds": 60,
+    "equity_tick_size": "0.01",
+    "periods_per_year": 94500,
+    "synthetic": true,
+    "provenance": "SYNTHETIC engineering fixture; zero costs and slippage, illustrative tick",
+    "costs": {
+      "equity_delivery": {},
+      "equity_intraday": {},
+      "future": {},
+      "option": {}
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "source": "SYNTHETIC engineering fixture; not an official exchange calendar",
+  "sessions": [
+    {
+      "session_date": "2024-01-02",
+      "opens_at": "2024-01-02T09:15:00+05:30",
+      "closes_at": "2024-01-02T15:30:00+05:30"
+    }
+  ]
+}

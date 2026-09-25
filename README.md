@@ -84,3 +84,30 @@ See [architecture](docs/ARCHITECTURE.md), [risk](docs/RISK_ENGINE.md),
 [implementation report](OVERNIGHT_REPORT.md).
 
 License: Apache-2.0. Runtime and development dependencies are open-source.
+
+## Phase 2 offline research
+
+Phase 2 adds provider-mapped historical imports, immutable raw data, checksummed
+manifests, canonical closed bars, explicit calendars, Parquet partitions, causal
+features, purged walk-forward CPU baselines, configurable transaction costs and a
+risk-gated backtester. It makes no network market-data requests and adds no live
+broker connection. Read [the data pipeline](docs/DATA_PIPELINE.md),
+[backtesting assumptions](docs/BACKTESTING.md), and [Phase 2 report](PHASE2_REPORT.md)
+before using locally supplied licensed data.
+
+Run the complete clearly labelled synthetic workflow with:
+
+```bash
+.venv/bin/python scripts/research_demo.py
+```
+
+It imports `examples/research/SYNTHETIC.csv`, engineers features, trains/evaluates a
+CPU model, and compares SMA and model signals on the same held-out test window.
+Outputs go under ignored `data/backtests/SYNTHETIC-<id>/`. These results verify
+engineering only; they are not evidence of trading profitability.
+
+For official or otherwise authorized data, first make an explicit provider column
+mapping and import it with `.venv/bin/trading-agent data validate` / `data import`. Supply a
+separately verified calendar, contract metadata, risk settings and dated cost rates
+before running a backtest. Expected canonical fields and commands are in
+[DATA_PIPELINE.md](docs/DATA_PIPELINE.md) and [PHASE2_REPORT.md](PHASE2_REPORT.md).
