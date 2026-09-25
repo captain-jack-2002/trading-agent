@@ -19,6 +19,8 @@ dependencies = [
   "numpy>=2,<3",
   "scikit-learn>=1.6,<2",
   "joblib>=1.4,<2",
+  "mcp>=2,<3",
+  "jsonschema>=4.20,<5",
 ]
 [project.scripts]
 trading-agent = "trading_agent.cli:main"
@@ -30,6 +32,7 @@ dev = [
     "ruff>=0.9,<1",
     "mypy>=1.14,<2",
     "pytest-asyncio>=1,<2",
+    "types-jsonschema>=4.26.0.20260518",
 ]
 [build-system]
 requires = ["uv_build>=0.12.18,<0.13.0"]

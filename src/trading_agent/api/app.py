@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -11,6 +12,11 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from trading_agent.config.settings import Settings
 from trading_agent.execution.paper import PaperBrokerAdapter
+from trading_agent.integrations.nse_mcp import (
+    NSEMCPIntegration,
+    NSEMCPProvider,
+    config_from_settings,
+)
 from trading_agent.market_data.interfaces import NSEDataProvider
 from trading_agent.models.domain import OrderRequest, PortfolioSnapshot, Position
 from trading_agent.monitoring.cache import OptionalCache
@@ -26,12 +32,14 @@ def create_app(
     settings: Settings | None = None,
     provider: NSEDataProvider | None = None,
     clock: Callable[[], datetime] = utc_now,
+    nse_mcp: NSEMCPIntegration | None = None,
 ) -> FastAPI:
     config = settings or Settings()
     store = Store(config.database_url)
     data = provider or MockNSEProvider(clock)
     broker = PaperBrokerAdapter(config, store, data, clock)
     cache = OptionalCache(config.valkey_url)
+    nse_mcp_integration = nse_mcp or NSEMCPIntegration(config_from_settings(config))
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -45,6 +53,7 @@ def create_app(
         store.engine.dispose()
 
     app = FastAPI(title="Trading Agent — paper only", version="0.1.0", lifespan=lifespan)
+    app.state.nse_research_provider = NSEMCPProvider(nse_mcp_integration, cache)
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request: Any, exc: SQLAlchemyError) -> JSONResponse:
@@ -118,6 +127,31 @@ def create_app(
             "quote_max_age_seconds": config.quote_max_age_seconds,
             "market_context": context,
         }
+
+    @app.get("/nse-mcp/status")
+    def nse_mcp_status() -> dict[str, Any]:
+        return asyncio.run(nse_mcp_integration.status())
+
+    @app.get("/nse-mcp/tools")
+    def nse_mcp_tools() -> dict[str, Any]:
+        async def discover() -> dict[str, Any]:
+            async def list_server(operation: Any) -> dict[str, Any]:
+                try:
+                    tools = await operation()
+                    return {
+                        "status": "available",
+                        "tools": [tool.model_dump(mode="json") for tool in tools],
+                    }
+                except Exception as exc:
+                    return {"status": "unavailable", "error": type(exc).__name__, "tools": []}
+
+            bhavcopy, cm_market = await asyncio.gather(
+                list_server(nse_mcp_integration.discover_bhavcopy_tools),
+                list_server(nse_mcp_integration.discover_cm_market_tools),
+            )
+            return {"bhavcopy": bhavcopy, "cm_market": cm_market}
+
+        return asyncio.run(discover())
 
     @app.post("/paper/orders")
     def paper_order(order: OrderRequest) -> JSONResponse:

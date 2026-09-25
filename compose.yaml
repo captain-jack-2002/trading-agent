@@ -13,7 +13,7 @@ services:
         condition: service_healthy
       valkey:
         condition: service_healthy
-    networks: [paper]
+    networks: [paper, nse_egress]
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -54,6 +54,8 @@ services:
 networks:
   paper:
     internal: true
+  nse_egress:
+    driver: bridge
 volumes:
   postgres_data:
   valkey_data:

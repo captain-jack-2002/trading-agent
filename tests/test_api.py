@@ -58,3 +58,32 @@ async def test_valkey_failure_is_optional(tmp_path):
         response = await client.get("/ready")
         assert response.status_code == 200
         assert response.json()["cache"] == "memory"
+
+
+async def test_nse_mcp_read_only_status_and_tools_routes(tmp_path):
+    from contextlib import asynccontextmanager
+    from types import SimpleNamespace
+
+    from mcp.types import Tool
+
+    from trading_agent.integrations.nse_mcp import NSEMCPConfig, NSEMCPIntegration
+
+    class OfflineSession:
+        async def list_tools(self, **kwargs):
+            return SimpleNamespace(
+                tools=[Tool(name="lookup", inputSchema={"type": "object"})], next_cursor=None
+            )
+
+    @asynccontextmanager
+    async def factory(url, timeout):
+        yield OfflineSession()
+
+    integration = NSEMCPIntegration(NSEMCPConfig(), factory)
+    app = create_app(Settings(database_url=f"sqlite:///{tmp_path}/nse-mcp.db"), nse_mcp=integration)
+    async with client_for(app) as client:
+        status = await client.get("/nse-mcp/status")
+        assert status.status_code == 200
+        assert status.json()["servers"][0]["status"] == "available"
+        tools = await client.get("/nse-mcp/tools")
+        assert tools.json()["bhavcopy"]["tools"][0]["name"] == "lookup"
+        assert (await client.post("/nse-mcp/tools", json={})).status_code == 405
