@@ -122,3 +122,25 @@ def test_source_bar_deny_control_rejected_before_training(tmp_path):
     path.write_text(json.dumps(content))
     with pytest.raises(ValueError):
         train(path, tmp_path)
+
+
+def test_backtest_cannot_reclassify_mcp_bars_as_executable_prices(tmp_path):
+    from pathlib import Path
+
+    mapping = CSVMapping.model_validate_json(Path("examples/research/mapping.json").read_text())
+    mapping = mapping.model_copy(update={"provider": "SYNTHETIC NSE MCP"})
+    manifest = import_csv(
+        Path("examples/research/SYNTHETIC.csv"), mapping, tmp_path / "imports", synthetic=True
+    )
+    with pytest.raises(ValueError, match="MCP"):
+        call(
+            "backtest",
+            "run",
+            tmp_path / "imports" / manifest.import_id / "manifest.json",
+            "--calendar",
+            "examples/research/calendar.json",
+            "--config",
+            "examples/research/backtest.json",
+            "--output",
+            tmp_path / "backtest",
+        )

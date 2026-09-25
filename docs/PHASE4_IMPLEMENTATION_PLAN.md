@@ -84,3 +84,13 @@ an explicit limitation. Final report and release gates are verified by the prima
 agent after the read-only review. No Critical issues or deferred Minor findings.
 First fixed-config evidence run completed 84 models/105 backtests; final evidence
 will be regenerated from the committed review fixes without changing parameters.
+
+Final policy check additionally reproduced an inherited standalone-backtest path
+that accepted CSV bars labeled as MCP. The CLI now applies the same synthetic/MCP
+policy before simulation (regression test RED→GREEN). No MCP responses were used;
+the test relabels the existing synthetic CSV. Coverage subprocess temporary files
+are now ignored (`.coverage.*`) so runtime state cannot contaminate Git provenance.
+The complete gate passed 203 tests with two separately verified service tests;
+Ruff, mypy, package/artifact validation and the updated rootless image build passed.
+Two full runs produced exactly equal 84 model and 105 backtest metric sets. Final
+report evidence is rerun after the ignore fix to eliminate transient dirty flags.

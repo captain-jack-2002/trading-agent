@@ -172,6 +172,7 @@ def run_backtest(args: argparse.Namespace) -> dict[str, Any]:
     from trading_agent.research_strategies import ResearchStrategy
 
     manifest, bars = read_import(args.manifest)
+    require_synthetic(manifest.provider, manifest.synthetic)
     document = json.loads(args.config.read_text())
     settings = Settings(**document["risk"])
     values = dict(document["simulation"])
