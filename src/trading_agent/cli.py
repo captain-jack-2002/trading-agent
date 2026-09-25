@@ -1,6 +1,7 @@
 """Explicit local-only research commands; no brokerage or credential access."""
 
 import argparse
+import asyncio
 import csv
 import json
 from datetime import datetime
@@ -75,10 +76,46 @@ def parser() -> argparse.ArgumentParser:
     )
     evaluate.add_argument("--partition", choices=("test", "out-of-sample"), default="test")
     evaluate.add_argument("--cost-bps", type=float, default=0)
+    nse_mcp = groups.add_parser("nse-mcp", help="Inspect official NSE research MCP servers")
+    nse_actions = nse_mcp.add_subparsers(dest="action", required=True)
+    nse_actions.add_parser("status", help="Check NSE MCP server availability")
+    nse_actions.add_parser("tools", help="Discover tools from both NSE MCP servers")
+    nse_actions.add_parser("test", help="Check connectivity through initialization and discovery")
     return root
 
 
 def dispatch(args: argparse.Namespace) -> dict[str, Any]:
+    if args.group == "nse-mcp":
+        from trading_agent.config.settings import Settings
+        from trading_agent.integrations.nse_mcp import NSEMCPIntegration, config_from_settings
+
+        integration = NSEMCPIntegration(config_from_settings(Settings()))
+        if args.action == "status":
+            return asyncio.run(integration.status())
+
+        async def discover() -> dict[str, Any]:
+            outcomes: dict[str, Any] = {}
+            for source, operation in (
+                ("bhavcopy", integration.discover_bhavcopy_tools),
+                ("cm_market", integration.discover_cm_market_tools),
+            ):
+                try:
+                    tools = await operation()
+                    outcomes[source] = {
+                        "status": "available",
+                        "tools": [tool.model_dump(mode="json") for tool in tools],
+                    }
+                except Exception as exc:
+                    outcomes[source] = {
+                        "status": "unavailable",
+                        "error": type(exc).__name__,
+                        "tools": [],
+                    }
+            return outcomes
+
+        if args.action == "tools":
+            return asyncio.run(discover())
+        return {"connectivity_check": "discovery_only", "servers": asyncio.run(discover())}
     if args.group == "data" and args.action == "inspect":
         with args.source.open(newline="", encoding="utf-8-sig") as stream:
             reader = csv.DictReader(stream)
@@ -127,8 +164,12 @@ def main(argv: list[str] | None = None) -> int:
     args = command.parse_args(argv)
     try:
         output = dispatch(args)
-    except (ValueError, OSError, KeyError, TypeError) as exc:
-        command.exit(2, f"error: {exc}\n")
+    except Exception as exc:
+        from trading_agent.integrations.nse_mcp import NSEMCPError
+
+        if isinstance(exc, NSEMCPError | ValueError | OSError | KeyError | TypeError):
+            command.exit(2, f"error: {exc}\n")
+        raise
     print(json.dumps(output, indent=2, sort_keys=True, allow_nan=False))
     return 0
 
