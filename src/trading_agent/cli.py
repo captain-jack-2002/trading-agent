@@ -51,6 +51,13 @@ def parser() -> argparse.ArgumentParser:
     run.add_argument("--fast", type=int, default=5)
     run.add_argument("--slow", type=int, default=20)
     run.add_argument("--quantity", type=int, default=1)
+    run.add_argument(
+        "--baseline",
+        choices=("sma", "cash", "naive"),
+        default="sma",
+        help="SMA crossover, cash/no signal, or trailing one-bar direction",
+    )
+    run.add_argument("--return-threshold", type=float, default=0.0)
     run.add_argument("--model", type=Path)
     run.add_argument("--trust-local-artifact", action="store_true")
     run.add_argument("--probability-threshold", type=float, default=0.5)
@@ -59,12 +66,26 @@ def parser() -> argparse.ArgumentParser:
     train = model_actions.add_parser("train")
     train.add_argument("dataset", type=Path)
     train.add_argument("--registry", type=Path, default=Path("data/models"))
-    train.add_argument("--algorithm", choices=("logistic", "random_forest"), default="logistic")
+    train.add_argument(
+        "--algorithm",
+        choices=("logistic", "ridge", "random_forest", "lightgbm", "all"),
+        default="logistic",
+    )
     train.add_argument("--train-size", type=int, required=True)
     train.add_argument("--validation-size", type=int, required=True)
     train.add_argument("--test-size", type=int, required=True)
     train.add_argument("--seed", type=int, default=42)
-    train.add_argument("--rolling", action="store_true")
+    modes = train.add_mutually_exclusive_group()
+    modes.add_argument("--rolling", action="store_true", help="Fixed-size training windows")
+    modes.add_argument(
+        "--holdout", action="store_true", help="Single split; test-size must cover the remainder"
+    )
+    train.add_argument("--step", type=int, help="Timestamp groups between walk-forward folds")
+    listing = model_actions.add_parser("list", help="List local metadata without loading models")
+    listing.add_argument("--registry", type=Path, default=Path("data/models"))
+    show = model_actions.add_parser("show", help="Show metadata and verify artifact checksum")
+    show.add_argument("model_id")
+    show.add_argument("--registry", type=Path, default=Path("data/models"))
     evaluate = model_actions.add_parser("evaluate")
     evaluate.add_argument("model", type=Path)
     evaluate.add_argument("dataset", type=Path)
@@ -155,6 +176,14 @@ def dispatch(args: argparse.Namespace) -> dict[str, Any]:
     if args.group == "features":
         return build_feature_artifact(args)
     if args.group == "model":
+        if args.action in ("list", "show"):
+            from trading_agent.ml.registry import list_models, show_model
+
+            return (
+                list_models(args.registry)
+                if args.action == "list"
+                else show_model(args.registry, args.model_id)
+            )
         return train_models(args) if args.action == "train" else evaluate_artifact(args)
     return run_backtest(args)
 

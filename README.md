@@ -111,3 +111,54 @@ mapping and import it with `.venv/bin/trading-agent data validate` / `data impor
 separately verified calendar, contract metadata, risk settings and dated cost rates
 before running a backtest. Expected canonical fields and commands are in
 [DATA_PIPELINE.md](docs/DATA_PIPELINE.md) and [PHASE2_REPORT.md](PHASE2_REPORT.md).
+
+
+## Phase 4: SYNTHETIC model engineering
+
+Phase 4 permits synthetic fixtures only. NSE MCP remains informational and never
+training eligible or an executable price. All execution stays paper. These model
+results are not evidence of expected market performance or live suitability.
+
+Run the complete fixed experiment (all four targets, three CPU models, final
+holdout, expanding/rolling folds, risk-gated baseline comparisons):
+
+```bash
+uv sync --frozen
+uv run python scripts/phase4_training.py --report PHASE4_MODEL_TRAINING_REPORT.md
+```
+
+Generated datasets, models, predictions, metrics and checksums are stored under
+ignored `data/models/PHASE4-SYNTHETIC-*/`. See the report for the exact run path.
+The `--report` option writes/updates the human-readable report; omit it to retain
+an existing report. The script uses only `examples/research/SYNTHETIC.csv`.
+
+Individual commands extend the Phase 2 CLI:
+
+```bash
+uv run trading-agent features build data/datasets/<import-id>/manifest.json   --output data/features/direction.json --target direction --horizon 5
+uv run trading-agent model train data/features/direction.json   --algorithm all --train-size 150 --validation-size 60 --test-size 85 --holdout
+uv run trading-agent model list --registry data/models
+uv run trading-agent model show <model-id> --registry data/models
+uv run trading-agent model evaluate data/models/<model-id> data/features/direction.json   --output data/models/evaluation.json --trust-local-artifact
+uv run trading-agent backtest run data/datasets/<import-id>/manifest.json   --calendar examples/research/calendar.json --config examples/research/backtest.json   --model data/models/<model-id> --trust-local-artifact --output data/backtests/model-run
+```
+
+For walk-forward training omit `--holdout`; add `--rolling` for fixed training
+windows. Sizes/step count distinct timestamps before purging. `--holdout` requires
+`--test-size` to equal the remaining timestamp groups. Folds purge label intervals
+at partition and successive test-window boundaries. Final-holdout data must be
+removed from walk-forward development input; the complete script does this.
+
+Feature target choices: `direction`, `threshold` (`--threshold`, inclusive),
+`barrier` (`--upper`, `--lower`), `future_return`. Regression uses `--algorithm ridge`,
+`random_forest`, `lightgbm`, or `all`. No hyperparameter search is performed.
+`backtest run --baseline cash|naive|sma` selects a fixed engineering baseline.
+Models use probability >=0.5 or predicted return>0; regression can explicitly use
+`--return-threshold`. `--help` documents every command. Serialized models execute
+Python when loaded; only load your own trusted local artifacts. `model show`
+checks metadata and SHA-256 without deserialization.
+
+Existing feature artifacts without `source_bars` must be rebuilt before training.
+New targets use `targets-v2` (inclusive threshold; unresolved barrier=negative,
+ambiguous bar excluded). New causal distances/range use `research-v2`; old models
+retain their original feature version and reject incompatible new features.

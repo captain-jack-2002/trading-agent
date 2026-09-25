@@ -106,3 +106,28 @@ def test_v2_barrier_neither_is_negative_and_ambiguous_is_excluded():
     selected[1] = selected[1].model_copy(update={"barrier": "ambiguous"})
     metrics = evaluate_model(bundle, selected)
     assert metrics["count"] == sum(r.barrier != "ambiguous" for r in selected)
+
+
+def test_barrier_keeps_full_evaluation_calendar_in_metadata():
+    rows, split = sample()
+    rows[split.test[0]] = rows[split.test[0]].model_copy(update={"barrier": "ambiguous"})
+    rows[split.test[-1]] = rows[split.test[-1]].model_copy(update={"barrier": "ambiguous"})
+    bundle = train_model(rows, split, target_field="barrier")
+    assert bundle.metadata["ranges"]["test"]["start"] == rows[split.test[0]].timestamp.isoformat()
+    assert bundle.metadata["ranges"]["test"]["end"] == rows[split.test[-1]].timestamp.isoformat()
+
+
+def test_metric_exact_values_and_single_class_cases():
+    from trading_agent.ml.metrics import classification_metrics, regression_metrics
+
+    report = classification_metrics([0, 1, 1, 0], [0, 1, 0.5, 0.5])
+    assert report["confusion_matrix"] == [[1, 1], [0, 2]]
+    assert report["brier"] == 0.125
+    assert report["precision"] == pytest.approx(2 / 3)
+    assert report["recall"] == 1
+    assert report["f1"] == 0.8
+    assert sum(c["count"] for c in report["calibration"]) == 4
+    assert classification_metrics([0, 0], [0.1, 0.3])["roc_auc"] is None
+    assert regression_metrics([1.0], [1.0])["r2"] is None
+    with pytest.raises(ValueError):
+        classification_metrics([0], [float("nan")])

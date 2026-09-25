@@ -9,6 +9,7 @@ from typing import Any
 from trading_agent.data.schemas.canonical import CanonicalBar
 from trading_agent.data.storage import ImportManifest, checksum, load_bars, verify_import
 from trading_agent.features.research import ResearchBar, build_features
+from trading_agent.ml.audit import require_synthetic
 from trading_agent.ml.dataset import DatasetRow, build_dataset
 from trading_agent.research_io import write_json
 
@@ -45,6 +46,7 @@ def research_bars(bars: list[CanonicalBar], manifest: ImportManifest) -> list[Re
 
 def build_feature_artifact(args: argparse.Namespace) -> dict[str, Any]:
     manifest, bars = read_import(args.manifest)
+    require_synthetic(manifest.provider, manifest.synthetic)
     inputs = research_bars(bars, manifest)
     features = build_features(inputs)
     rows = build_dataset(
@@ -67,6 +69,7 @@ def build_feature_artifact(args: argparse.Namespace) -> dict[str, Any]:
             if manifest.synthetic
             else "Research only; verify source licensing, adjustments and assumptions",
             "target_field": target_field,
+            "source_bars": [bar.model_dump(mode="json") for bar in inputs],
             "features": [row.model_dump(mode="json") for row in features],
             "rows": [row.model_dump(mode="json") for row in rows],
         },
@@ -98,32 +101,19 @@ def read_dataset(path: Path) -> tuple[list[DatasetRow], str]:
 
 
 def train_models(args: argparse.Namespace) -> dict[str, Any]:
-    from trading_agent.ml.pipeline import train_model
-    from trading_agent.ml.registry import save_model
-    from trading_agent.ml.split import walk_forward
+    from trading_agent.ml.experiment import TrainingConfig, run_training
 
     rows, target_field = read_dataset(args.dataset)
-    if target_field == "future_return":
-        raise ValueError(
-            "future_return is a stored regression target; baseline models classify only"
-        )
-    splits = walk_forward(
-        rows, args.train_size, args.validation_size, args.test_size, expanding=not args.rolling
+    config = TrainingConfig(
+        algorithm=args.algorithm,
+        seed=args.seed,
+        train_size=args.train_size,
+        validation_size=args.validation_size,
+        test_size=args.test_size,
+        mode="holdout" if args.holdout else "rolling" if args.rolling else "expanding",
+        step=args.step,
     )
-    if not splits:
-        raise ValueError(
-            "no nonempty purged folds: reduce window sizes or supply more observations"
-        )
-    models = []
-    for split in splits:
-        bundle = train_model(
-            rows, split, model_kind=args.algorithm, seed=args.seed, target_field=target_field
-        )
-        bundle.metadata["dataset_artifact_sha256"] = checksum(args.dataset)
-        path = args.registry / str(bundle.metadata["model_id"])
-        save_model(bundle, path)
-        models.append(str(path))
-    return {"models": models, "folds": len(models), "synthetic": any(r.synthetic for r in rows)}
+    return run_training(rows, target_field, args.dataset, args.registry, config)
 
 
 def evaluate_artifact(args: argparse.Namespace) -> dict[str, Any]:
@@ -211,7 +201,7 @@ def run_backtest(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError("selected backtest period contains no bars")
     values["synthetic"] = manifest.synthetic or bool(model and model.metadata["synthetic"])
     values["dataset_version"] = manifest.import_id
-    values["strategy_name"] = "ml_probability_baseline" if model else "sma_crossover_demo"
+    values["strategy_name"] = "ml_probability_baseline" if model else f"{args.baseline}_baseline"
     values["strategy_config"] = {
         "fast": str(args.fast),
         "slow": str(args.slow),
@@ -219,6 +209,7 @@ def run_backtest(args: argparse.Namespace) -> dict[str, Any]:
         "model_id": model_id,
         "model_lineage": model_lineage,
         "probability_threshold": str(args.probability_threshold),
+        "return_threshold": str(args.return_threshold),
         "stop_intent_fraction": "0.05; no automatic stop execution",
         "start": start.isoformat() if start else "dataset-start",
         "end": end.isoformat() if end else "dataset-end",
@@ -231,6 +222,8 @@ def run_backtest(args: argparse.Namespace) -> dict[str, Any]:
         quantity=args.quantity,
         model=model,
         threshold=args.probability_threshold,
+        baseline_kind=args.baseline,
+        return_threshold=args.return_threshold,
     )
     result = BacktestEngine(settings, config, calendar).run(bars, strategy, warmup_bars=warmup_bars)
     result.write_reports(args.output)

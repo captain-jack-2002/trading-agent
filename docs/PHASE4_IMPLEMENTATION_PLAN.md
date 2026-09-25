@@ -23,7 +23,7 @@ is the authoritative specification and authorizes incremental execution.
   classifiers and clean regression support; train-only imputation/scaling,
   probability distributions/calibration, dependency/Python/Git/dataset metadata,
   serialization/checksums and malformed/missing input. No parameter search.
-- [ ] 3. Workflow: extend model train/evaluate/list/show and backtest run; persist
+- [x] 3. Workflow: extend model train/evaluate/list/show and backtest run; persist
   configs, predictions, fold/aggregate metrics, audit and metadata. Add fixed cash,
   trailing-direction and SMA comparisons using the same test windows and existing
   risk/cost/slippage engines. Test CLI, denied trades and strict OOS boundaries.
@@ -61,3 +61,9 @@ Milestones 1–2: 184 tests passed, two optional service tests skipped; mypy and
 focused Ruff passed. Added LightGBM 4.7.0 (MIT) with deterministic one-thread CPU
 settings and container libgomp1. New tests first demonstrated missing policies,
 metadata, inclusive thresholds and regression support, then passed after changes.
+
+Milestone 3: 191 tests passed, two optional service tests skipped; Ruff and mypy
+passed. The full CLI flow, registry inspection, immutable run artifacts, source
+rebuild and risk-denial integration pass. Container built and imported LightGBM
+4.7.0 with paper settings. Barrier metric filtering now preserves evaluation
+calendar boundaries; a failing regression test demonstrated and pins the fix.

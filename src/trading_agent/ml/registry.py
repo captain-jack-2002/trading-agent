@@ -5,6 +5,7 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import joblib  # type: ignore[import-untyped]
 
@@ -51,3 +52,21 @@ def load_model(path: Path, *, trusted: bool = False) -> ModelBundle:
     if bundle.metadata != {k: v for k, v in metadata.items() if k != "sha256"}:
         raise ValueError("metadata mismatch")
     return bundle
+
+
+def show_model(registry: Path, model_id: str) -> dict[str, Any]:
+    if not model_id or Path(model_id).name != model_id or model_id in (".", ".."):
+        raise ValueError("model_id must be a local registry identifier")
+    path = registry / model_id
+    if not path.resolve().is_relative_to(registry.resolve()):
+        raise ValueError("model_id escapes registry")
+    metadata = json.loads((path / "metadata.json").read_text())
+    digest = hashlib.sha256((path / "model.joblib").read_bytes()).hexdigest()
+    if digest != metadata["sha256"]:
+        raise ValueError("model checksum mismatch")
+    return {"metadata": metadata, "checksum_valid": True}
+
+
+def list_models(registry: Path) -> dict[str, Any]:
+    models = [json.loads(path.read_text()) for path in sorted(registry.glob("*/metadata.json"))]
+    return {"models": models, "warning": "SYNTHETIC local research artifacts only"}

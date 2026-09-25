@@ -104,7 +104,7 @@ def train_model(
         if max(rows[i].label_end for i in left) >= min(rows[i].timestamp for i in right):
             raise ValueError("overlapping label horizons")
     if target_field == "barrier":
-        partitions = [tuple(i for i in part if eligible_barrier(rows[i])) for part in partitions]
+        partitions[0] = tuple(i for i in partitions[0] if eligible_barrier(rows[i]))
         if any(not p for p in partitions):
             raise ValueError("barrier filtering leaves empty partition")
     training = [rows[i] for i in partitions[0]]
@@ -210,6 +210,7 @@ def train_model(
 def evaluate_model(
     bundle: ModelBundle, rows: Sequence[DatasetRow], cost_bps: float = 0
 ) -> dict[str, Any]:
+    audit_features(rows)
     if not rows or not np.isfinite(cost_bps) or cost_bps < 0:
         raise ValueError("nonempty rows and nonnegative finite costs required")
     if any(r.feature_version != bundle.metadata["feature_version"] for r in rows):
