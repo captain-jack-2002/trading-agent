@@ -41,3 +41,26 @@ def test_warmup_and_bad_bars():
         MovingAverageCrossover(3, 2)
     with pytest.raises(ValueError):
         MovingAverageCrossover(2, 3).generate(list(reversed(bars([1, 2, 3]))))
+
+
+@pytest.mark.asyncio
+async def test_agent_research_request_degrades_when_nse_is_unavailable():
+    from contextlib import asynccontextmanager
+
+    from trading_agent.integrations.nse_mcp import NSEMCPConfig, NSEMCPIntegration, NSEMCPProvider
+
+    class OfflineSession:
+        async def list_tools(self, **kwargs):
+            raise ConnectionError("fixture offline")
+
+        async def call_tool(self, name, arguments):
+            raise AssertionError("must not call an undiscovered tool")
+
+    @asynccontextmanager
+    async def factory(url, timeout):
+        yield OfflineSession()
+
+    agent = ResearchAgent()
+    provider = NSEMCPProvider(NSEMCPIntegration(NSEMCPConfig(), factory))
+    context = await agent.request_nse_research(provider, "bhavcopy", "unknown", {})
+    assert context.status == "research_context_unavailable"

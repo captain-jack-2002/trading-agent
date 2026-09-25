@@ -43,6 +43,18 @@ class OHLCVBar(DomainModel):
         return self
 
 
+class HistoricalTrainingData(DomainModel):
+    """Licensed or otherwise authorized bars eligible for historical research pipelines."""
+
+    bars: tuple[OHLCVBar, ...]
+
+
+class ExecutableMarketQuote(DomainModel):
+    """Quote supplied by the configured executable-price source."""
+
+    quote: Quote
+
+
 class TradeSignal(DomainModel):
     symbol: Symbol
     side: Literal["buy", "sell", "hold"]

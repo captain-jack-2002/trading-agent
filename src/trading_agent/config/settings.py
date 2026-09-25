@@ -2,7 +2,7 @@ from datetime import time
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PositiveMoney = Annotated[Decimal, Field(gt=0, allow_inf_nan=False)]
@@ -26,6 +26,17 @@ class Settings(BaseSettings):
     market_open: time = time(9, 15)
     market_close: time = time(15, 30)
     holidays: frozenset[str] = frozenset()
+    nse_mcp_enabled: bool = True
+    nse_bhavcopy_mcp_url: str = Field(
+        default="https://mcp.nseindia.in/bhavcopy/cm/mcp",
+        validation_alias=AliasChoices("NSE_BHAVCOPY_MCP_URL", "TRADING_NSE_BHAVCOPY_MCP_URL"),
+    )
+    nse_cm_market_mcp_url: str = Field(
+        default="https://mcp.nseindia.in/cmmkt/mcp",
+        validation_alias=AliasChoices("NSE_CM_MARKET_MCP_URL", "TRADING_NSE_CM_MARKET_MCP_URL"),
+    )
+    nse_mcp_timeout_seconds: Annotated[float, Field(gt=0, le=120)] = 10.0
+    nse_mcp_cache_ttl_seconds: Annotated[int, Field(gt=0, le=3600)] = 60
 
     @model_validator(mode="after")
     def validate_session(self) -> "Settings":

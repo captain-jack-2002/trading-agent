@@ -1,0 +1,152 @@
+{
+  "bar_seconds": 60,
+  "equity_tick_size": "0.01",
+  "costs": {
+    "equity_delivery": {
+      "brokerage": {
+        "buy": "0.0001",
+        "sell": "0.0001",
+        "cap": "7"
+      },
+      "stt": {
+        "buy": "0",
+        "sell": "0.0003",
+        "cap": null
+      },
+      "exchange": {
+        "buy": "0.00002",
+        "sell": "0.00002",
+        "cap": null
+      },
+      "sebi": {
+        "buy": "0.000001",
+        "sell": "0.000001",
+        "cap": null
+      },
+      "stamp": {
+        "buy": "0.00001",
+        "sell": "0",
+        "cap": null
+      },
+      "gst_rate": "0.1",
+      "gst_components": [
+        "brokerage",
+        "exchange",
+        "sebi"
+      ]
+    },
+    "equity_intraday": {
+      "brokerage": {
+        "buy": "0.0002",
+        "sell": "0.0002",
+        "cap": "7"
+      },
+      "stt": {
+        "buy": "0",
+        "sell": "0.0006",
+        "cap": null
+      },
+      "exchange": {
+        "buy": "0.00002",
+        "sell": "0.00002",
+        "cap": null
+      },
+      "sebi": {
+        "buy": "0.000001",
+        "sell": "0.000001",
+        "cap": null
+      },
+      "stamp": {
+        "buy": "0.00002",
+        "sell": "0",
+        "cap": null
+      },
+      "gst_rate": "0.1",
+      "gst_components": [
+        "brokerage",
+        "exchange",
+        "sebi"
+      ]
+    },
+    "future": {
+      "brokerage": {
+        "buy": "0.0003",
+        "sell": "0.0003",
+        "cap": "7"
+      },
+      "stt": {
+        "buy": "0",
+        "sell": "0.0009",
+        "cap": null
+      },
+      "exchange": {
+        "buy": "0.00002",
+        "sell": "0.00002",
+        "cap": null
+      },
+      "sebi": {
+        "buy": "0.000001",
+        "sell": "0.000001",
+        "cap": null
+      },
+      "stamp": {
+        "buy": "0.00003",
+        "sell": "0",
+        "cap": null
+      },
+      "gst_rate": "0.1",
+      "gst_components": [
+        "brokerage",
+        "exchange",
+        "sebi"
+      ]
+    },
+    "option": {
+      "brokerage": {
+        "buy": "0.0004",
+        "sell": "0.0004",
+        "cap": "7"
+      },
+      "stt": {
+        "buy": "0",
+        "sell": "0.0012",
+        "cap": null
+      },
+      "exchange": {
+        "buy": "0.00002",
+        "sell": "0.00002",
+        "cap": null
+      },
+      "sebi": {
+        "buy": "0.000001",
+        "sell": "0.000001",
+        "cap": null
+      },
+      "stamp": {
+        "buy": "0.00004",
+        "sell": "0",
+        "cap": null
+      },
+      "gst_rate": "0.1",
+      "gst_components": [
+        "brokerage",
+        "exchange",
+        "sebi"
+      ]
+    }
+  },
+  "slippage": {
+    "bps": "0",
+    "percentage": "0",
+    "volatility_multiplier": "0"
+  },
+  "periods_per_year": 94500,
+  "risk_free_rate": 0.0,
+  "fill_mode": "full",
+  "fill_fraction": "1",
+  "strategy_name": "synthetic-example",
+  "strategy_config": {},
+  "dataset_version": "synthetic-v1",
+  "synthetic": true,
+  "provenance": "SYNTHETIC INVENTED ILLUSTRATIVE RATES. NOT OFFICIAL; NOT FOR INVESTMENT DECISIONS."
+}

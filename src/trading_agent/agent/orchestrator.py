@@ -1,5 +1,6 @@
 from typing import Protocol
 
+from trading_agent.integrations.nse_mcp import MCPResearchContext, NSEMCPProvider, ServerSource
 from trading_agent.models.domain import PortfolioSnapshot, TradeSignal
 
 
@@ -25,3 +26,13 @@ class ResearchAgent:
                 f"context source={context.get('source', 'unknown')}; equity INR {portfolio.equity}"
             ),
         )
+
+    async def request_nse_research(
+        self,
+        provider: NSEMCPProvider,
+        source: ServerSource,
+        tool_name: str,
+        arguments: dict[str, object],
+    ) -> MCPResearchContext:
+        """Request an explicitly selected discovered tool as informational context."""
+        return await provider.request_context(source, tool_name, arguments)
