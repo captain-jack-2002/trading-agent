@@ -10,7 +10,7 @@ aware instant, not an inferred exchange settlement time.
 
 Each instrument must be strictly chronological; interleaving instruments is fine.
 Duplicates and reversals fail. Features include simple/log returns at 1/5/10/20 bars,
-20-bar SMA, seeded EMA12/26, Wilder RSI14 and ATR14, MACD/signal/histogram,
+5-, 10-, 20-, and 50-bar SMAs, seeded EMA12/26, Wilder RSI14 and ATR14, MACD/signal/histogram,
 20-bar Bollinger bands and position, sample log-return realized volatility,
 Parkinson high-low volatility, ATR/close, volume relative to the previous 20 bars,
 volume z-score and second difference, price z-score and return acceleration,
