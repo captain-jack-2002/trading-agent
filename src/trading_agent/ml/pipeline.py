@@ -176,6 +176,10 @@ def train_model(
             "threshold": training[0].threshold,
             "label_version": training[0].label_version,
         },
+        "partition_samples": {
+            name: [[rows[i].instrument_id, rows[i].timestamp.isoformat()] for i in part]
+            for name, part in zip(("train", "validation", "test"), partitions, strict=True)
+        },
         "ranges": {
             name: {
                 "start": min(rows[i].timestamp for i in part).isoformat(),

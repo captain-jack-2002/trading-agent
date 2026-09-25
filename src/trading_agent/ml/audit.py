@@ -15,7 +15,7 @@ def require_synthetic(provenance: str, synthetic: bool) -> None:
     if "mcp" in provenance.lower():
         raise ValueError("MCP data is informational only and never training eligible")
     # Legacy test fixtures predate the explicit synthetic flag.
-    if not synthetic and "synthetic" not in provenance.lower():
+    if not synthetic and provenance != "SYNTHETIC":
         raise ValueError("Phase 4 permits SYNTHETIC fixtures only")
 
 

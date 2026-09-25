@@ -105,3 +105,50 @@ def test_multi_instrument_split_uses_global_time_boundaries():
     for left, right in ((split.train, split.validation), (split.validation, split.test)):
         assert max(rows[i].label_end for i in left) < min(rows[i].timestamp for i in right)
         assert {rows[i].instrument_id for i in left} == {"A", "B"}
+
+
+def test_future_price_perturbation_cannot_change_prior_features():
+    data = bars(80)
+    altered = [
+        b.model_copy(
+            update={
+                "close": b.close * 10,
+                "high": b.high * 10,
+                "low": b.low * 10,
+                "volume": b.volume * 100,
+            }
+        )
+        if i >= 40
+        else b
+        for i, b in enumerate(data)
+    ]
+    assert build_features(data)[:40] == build_features(altered)[:40]
+    original = build_dataset(data, horizon=5)
+    changed = build_dataset(altered, horizon=5)
+    assert original[39].values == changed[39].values
+    assert original[39].future_return != changed[39].future_return
+
+
+def test_fo_features_use_current_instrument_observations():
+    from datetime import timedelta
+
+    data = [
+        b.model_copy(
+            update={
+                "open_interest": 1000.0 + i * 10,
+                "underlying_price": 100.0,
+                "strike": 110.0,
+                "expiry": bars(1)[0].timestamp + timedelta(days=90),
+            }
+        )
+        for i, b in enumerate(bars(40))
+    ]
+    row = build_features(data)[-1]
+    assert row.values["oi_change"] == 10
+    assert row.values["price_oi_relationship"] == pytest.approx(
+        (data[-1].close - data[-2].close) * 10
+    )
+    assert row.values["basis"] == pytest.approx(data[-1].close / 100 - 1)
+    assert row.values["moneyness"] == pytest.approx(100 / 110)
+    assert row.values["time_to_expiry_days"] == 51
+    assert build_features(data[:30]) == build_features(data)[:30]

@@ -9,7 +9,7 @@ from typing import Any
 from trading_agent.data.schemas.canonical import CanonicalBar
 from trading_agent.data.storage import ImportManifest, checksum, load_bars, verify_import
 from trading_agent.features.research import ResearchBar, build_features
-from trading_agent.ml.audit import require_synthetic
+from trading_agent.ml.audit import require_synthetic, verify_dataset_rebuild
 from trading_agent.ml.dataset import DatasetRow, build_dataset
 from trading_agent.research_io import write_json
 
@@ -131,8 +131,16 @@ def evaluate_artifact(args: argparse.Namespace) -> dict[str, Any]:
             raise ValueError(
                 "saved test evaluation requires the original immutable dataset artifact"
             )
-        rows = [r for r in rows if start <= r.timestamp <= end]
+        if "partition_samples" in bundle.metadata:
+            keys = {tuple(key) for key in bundle.metadata["partition_samples"]["test"]}
+            rows = [r for r in rows if (r.instrument_id, r.timestamp.isoformat()) in keys]
+            if len(rows) != len(keys):
+                raise ValueError("saved test sample identities do not match dataset")
+        else:
+            # Legacy Phase 2 bundles predate cross-fold purging and exact sample IDs.
+            rows = [r for r in rows if start <= r.timestamp <= end]
     else:
+        verify_dataset_rebuild(args.dataset, rows)
         cutoff = datetime.fromisoformat(bundle.metadata["ranges"]["validation"]["label_end"])
         rows = [r for r in rows if r.timestamp > cutoff]
     metrics = evaluate_model(bundle, rows, cost_bps=args.cost_bps)

@@ -67,3 +67,20 @@ passed. The full CLI flow, registry inspection, immutable run artifacts, source
 rebuild and risk-denial integration pass. Container built and imported LightGBM
 4.7.0 with paper settings. Barrier metric filtering now preserves evaluation
 calendar boundaries; a failing regression test demonstrated and pins the fix.
+
+Independent whole-branch review found four Important issues, all reproduced first
+by nine failing tests in `test_phase4_review.py`: timestamp-range reevaluation
+reintroduced purged irregular-instrument samples; OOS evaluation skipped source
+rebuild; substring provenance accepted a non-synthetic feed; permissive parsing
+silently discarded source deny controls. Fixes persist exact partition identities,
+rebuild OOS inputs, narrow synthetic inference, and reject unknown bar/row fields.
+The 52-test focused suite passed; full suite passed 200 tests with two optional
+service skips. Separate isolated service checks passed both tests. Two additional
+causality/F&O regression checks passed with the 13-test leakage suite.
+
+Review scope rulings: no market usefulness or investment suitability claim is
+made; cryptographic provenance is outside this local checksum system and remains
+an explicit limitation. Final report and release gates are verified by the primary
+agent after the read-only review. No Critical issues or deferred Minor findings.
+First fixed-config evidence run completed 84 models/105 backtests; final evidence
+will be regenerated from the committed review fixes without changing parameters.

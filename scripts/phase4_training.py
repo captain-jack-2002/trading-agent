@@ -4,6 +4,7 @@ import argparse
 import json
 import resource
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -120,6 +121,9 @@ def render_report(summary: dict[str, Any], output: Path) -> str:
         "not duplicate sample identities. Same instruments recur across time; these tests "
         "do not claim transfer to unseen instruments. Overlapping labels within training "
         "are permitted; no cross-boundary overlap is permitted.\n",
+        "Saved test evaluation uses exact sample identities, including irregular "
+        "instrument purges. OOS evaluation rebuilds features and labels from fixture bars. "
+        "Unknown source controls are rejected rather than discarded. "
         "Phase 3 MCP flags remain informational_only=true, training_eligible=false, "
         "executable_price=false. Phase 4 rejects MCP provenance and non-synthetic inputs. "
         "Provenance and checksums are local engineering controls, not cryptographic proof "
@@ -476,15 +480,20 @@ def main() -> None:
         )
         document = json.loads(full.read_text())
         # Development labels may use only bars strictly before the final test start.
-        cutoff = document["rows"][210]["timestamp"]
+        cutoff = datetime.fromisoformat(document["rows"][210]["timestamp"])
         source = [ResearchBar.model_validate(b) for b in document["source_bars"]]
-        source = [bar for bar in source if bar.timestamp.isoformat() < cutoff]
+        source = [bar for bar in source if bar.timestamp < cutoff]
         dev = output / "datasets" / f"{target}-development.json"
         write_json(
             dev,
             {
                 **document,
                 "source_bars": [b.model_dump(mode="json") for b in source],
+                "features": [
+                    f
+                    for f in document["features"]
+                    if datetime.fromisoformat(f["timestamp"]) < cutoff
+                ],
                 "rows": [
                     r.model_dump(mode="json")
                     for r in build_dataset(

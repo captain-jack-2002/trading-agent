@@ -84,9 +84,14 @@ def import_csv(
 ) -> ImportManifest:
     if batch_size < 1 or batch_size > 1_000_000:
         raise ValueError("batch_size must be between 1 and 1000000")
-    synthetic = (
-        synthetic or "synthetic" in mapping.provider.lower() or "synthetic" in path.name.lower()
-    )
+
+    def synthetic_label(value: str) -> bool:
+        label = value.lower()
+        return label == "synthetic" or label.startswith(
+            ("synthetic-", "synthetic_", "synthetic.", "synthetic ")
+        )
+
+    synthetic = synthetic or synthetic_label(mapping.provider) or synthetic_label(path.name)
     storage_dir.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=".import-", dir=storage_dir))
     try:

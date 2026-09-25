@@ -13,7 +13,7 @@ FEATURE_VERSION = "research-v2"
 
 
 class ResearchBar(BaseModel):
-    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False, extra="forbid")
     instrument_id: str = Field(min_length=1)
     timestamp: datetime
     close: float = Field(gt=0)
@@ -40,7 +40,7 @@ class ResearchBar(BaseModel):
 
 
 class FeatureRow(BaseModel):
-    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False, extra="forbid")
     instrument_id: str
     timestamp: datetime
     feature_version: str = FEATURE_VERSION
