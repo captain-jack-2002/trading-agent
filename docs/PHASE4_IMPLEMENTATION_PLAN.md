@@ -27,12 +27,12 @@ is the authoritative specification and authorizes incremental execution.
   configs, predictions, fold/aggregate metrics, audit and metadata. Add fixed cash,
   trailing-direction and SMA comparisons using the same test windows and existing
   risk/cost/slippage engines. Test CLI, denied trades and strict OOS boundaries.
-- [ ] 4. Evidence: run a reproducible script using only the existing fixture,
+- [x] 4. Evidence: run a reproducible script using only the existing fixture,
   evaluate direction/threshold/barrier/regression, holdout and both walk-forward
   modes; write `PHASE4_MODEL_TRAINING_REPORT.md` with exact metrics, fold ranges,
   IDs, limitations, artifact paths, runtime and recommendations for real-data
   evaluation only. Document commands and dataset licensing handoff for Phase 5.
-- [ ] 5. Review and release checks: fresh whole-branch review; fix significant
+- [x] 5. Review and release checks: fresh whole-branch review; fix significant
   findings with regression tests; run `./scripts/check.sh`, explicitly run Ruff
   format/check, mypy, `uv build`, and rootless Podman build if dependencies change.
   Commit stable milestones; verify clean tree, expected branch and unchanged tags.
@@ -94,3 +94,14 @@ The complete gate passed 203 tests with two separately verified service tests;
 Ruff, mypy, package/artifact validation and the updated rootless image build passed.
 Two full runs produced exactly equal 84 model and 105 backtest metric sets. Final
 report evidence is rerun after the ignore fix to eliminate transient dirty flags.
+
+Final evidence: `data/models/PHASE4-SYNTHETIC-63d2625cfabd48a2877b08f98ae00978`.
+84 model fits, 105 backtests, all 465 runtime artifact checksums verified; exact
+partition prediction membership and shared backtest windows verified. All model
+metadata records clean source commit af5d3be. Runtime 174.785 s; recorded fit/eval
+8.338 s; peak process RSS 223.46 MiB. Metrics identical across three full runs.
+Final gates: 203 tests passed (+2 service tests passed separately), Ruff format/lint,
+mypy, uv build, distribution checks, rootless image build and isolated import smoke
+all passed. Report contains the complete metrics, registry IDs, limitations and
+Phase 5 plan. Final documentation commit and clean-tree/tag verification precede
+the authorized ntfy completion notice.
