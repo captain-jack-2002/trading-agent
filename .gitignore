@@ -16,3 +16,12 @@ htmlcov/
 .tmp/
 .podman/
 .r/
+# Phase 2 generated research artifacts (small labelled examples live in examples/).
+/data/raw/
+/data/normalized/
+/data/parquet/
+/data/features/
+/data/models/
+/data/backtests/
+/data/datasets/
+/data/manifests/

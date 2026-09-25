@@ -1,0 +1,5 @@
+{
+  "provider": "SYNTHETIC-engineering-fixture",
+  "columns": {"symbol": "Ticker", "timestamp": "ClosedAt", "open": "O", "high": "H", "low": "L", "close": "C", "volume": "Qty"},
+  "defaults": {"asset_class": "equity", "exchange": "NSE"}
+}
