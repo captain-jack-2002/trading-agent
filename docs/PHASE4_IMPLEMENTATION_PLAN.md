@@ -15,11 +15,11 @@ is the authoritative specification and authorizes incremental execution.
 
 ## Milestones
 
-- [ ] 1. Labels and leakage: tests first for inclusive threshold, barrier ambiguity
+- [x] 1. Labels and leakage: tests first for inclusive threshold, barrier ambiguity
   and full-horizon purge, duplicate identities, timestamp groups, feature schema,
   synthetic/MCP policy, chronological holdout, rolling/expanding folds. Fix labels
   with a target-version bump. Add causal distances/range through existing features.
-- [ ] 2. Models: tests first for deterministic logistic/random forest/LightGBM CPU
+- [x] 2. Models: tests first for deterministic logistic/random forest/LightGBM CPU
   classifiers and clean regression support; train-only imputation/scaling,
   probability distributions/calibration, dependency/Python/Git/dataset metadata,
   serialization/checksums and malformed/missing input. No parameter search.
@@ -56,3 +56,8 @@ Initial verification: requested directory/branch; clean tree. Tag object IDs:
 `v0.1.0-phase1=6b4ac627c9386bf249ae992809b794588fd3e2eb`,
 `v0.2.0-phase2=9c51a651004e0472c8cf0f7ac077767213835132`,
 `v0.3.0-phase3-nse-mcp=6b6ba60031d22bf1afc0b152ed9c3ec65c82c655`.
+
+Milestones 1–2: 184 tests passed, two optional service tests skipped; mypy and
+focused Ruff passed. Added LightGBM 4.7.0 (MIT) with deterministic one-thread CPU
+settings and container libgomp1. New tests first demonstrated missing policies,
+metadata, inclusive thresholds and regression support, then passed after changes.

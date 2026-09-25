@@ -21,6 +21,7 @@ dependencies = [
   "joblib>=1.4,<2",
   "mcp>=2,<3",
   "jsonschema>=4.20,<5",
+  "lightgbm>=4.6,<5",
 ]
 [project.scripts]
 trading-agent = "trading_agent.cli:main"

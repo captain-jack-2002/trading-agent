@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 from trading_agent.features import indicators as ind
 
-FEATURE_VERSION = "research-v1"
+FEATURE_VERSION = "research-v2"
 
 
 class ResearchBar(BaseModel):
@@ -114,6 +114,20 @@ def build_features(bars: Sequence[ResearchBar]) -> list[FeatureRow]:
             values["bollinger_position"] = (
                 (bar.close - (avg - 2 * std)) / (4 * std) if avg is not None and std else None
             )
+            for period in (5, 10, 20, 50):
+                average = moving_averages[period][i]
+                values[f"sma_distance_{period}"] = bar.close / average - 1 if average else None
+            values["ema_distance_12"] = bar.close / ema12[i] - 1
+            values["ema_distance_26"] = bar.close / ema26[i] - 1
+            values["rolling_range_pct_20"] = (
+                (
+                    max(b.high for b in group[i - 19 : i + 1])
+                    - min(b.low for b in group[i - 19 : i + 1])
+                )
+                / bar.close
+                if window
+                else None
+            )
             values["open_interest"] = bar.open_interest
             values.update(
                 {
@@ -175,3 +189,43 @@ def build_features(bars: Sequence[ResearchBar]) -> list[FeatureRow]:
                 values=values,
             )
     return [result[b.instrument_id, b.timestamp] for b in bars]
+
+
+# Exact schema owned by the causal builder, never inferred from supplied training columns.
+FEATURE_NAMES = frozenset(
+    {
+        *(f"{kind}_{n}" for kind in ("return", "log_return") for n in (1, 5, 10, 20)),
+        *(f"{kind}_{n}" for kind in ("sma", "sma_distance") for n in (5, 10, 20, 50)),
+        "ema_12",
+        "ema_26",
+        "ema_distance_12",
+        "ema_distance_26",
+        "rolling_range_pct_20",
+        "rsi_14",
+        "macd",
+        "macd_signal",
+        "macd_histogram",
+        "atr_14",
+        "atr_pct",
+        "bollinger_upper",
+        "bollinger_lower",
+        "bollinger_position",
+        "realized_volatility_20",
+        "high_low_volatility_20",
+        "volume_ratio_20",
+        "volume_zscore_20",
+        "volume_acceleration",
+        "zscore_20",
+        "return_acceleration",
+        "ma_distance_20",
+        "momentum_20",
+        "rolling_high_20",
+        "rolling_low_20",
+        "open_interest",
+        "oi_change",
+        "price_oi_relationship",
+        "basis",
+        "time_to_expiry_days",
+        "moneyness",
+    }
+)

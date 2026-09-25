@@ -19,7 +19,7 @@ class DatasetRow(FeatureRow):
     upper_barrier: float
     lower_barrier: float
     barrier: Literal["upper", "lower", "neither", "ambiguous"]
-    label_version: str = "targets-v1"
+    label_version: str = "targets-v2"
 
     @model_validator(mode="after")
     def valid_label(self) -> "DatasetRow":
@@ -72,7 +72,7 @@ def build_dataset(
                     horizon=horizon,
                     future_return=change,
                     direction=int(change > 0),
-                    target=int(change > threshold),
+                    target=int(change >= threshold),
                     threshold=threshold,
                     upper_barrier=upper_barrier,
                     lower_barrier=lower_barrier,
