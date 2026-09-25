@@ -1,25 +1,88 @@
-# Trading Agent — Phase 1
+<div align="center">
 
-An open-source Python 3.12 foundation for AI-assisted Indian-market research.
-**Paper execution only.** No live brokerage integration, credentials, scraping,
-LLM dependency or profitability claims. The default symbol `DEMO` and its quotes
-are synthetic; changing the allowlist does not provide real market data.
+# Trading Agent
 
-## Run locally
+### Research-first, risk-gated trading infrastructure for Indian markets
 
-Install Python 3.12 and uv using your existing user-level tooling, then:
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Execution](https://img.shields.io/badge/Execution-Paper%20Only-F59E0B)
+![Phase](https://img.shields.io/badge/Latest-v0.4.0-7C3AED)
+![Tests](https://img.shields.io/badge/Tests-203%20passed-22C55E)
+![Coverage](https://img.shields.io/badge/Coverage-91%25-22C55E)
+![License](https://img.shields.io/badge/License-Apache--2.0-blue)
+
+**Deterministic risk controls · Causal ML features · Walk-forward validation · NSE research context · Reproducible model registry**
+
+</div>
+
+> [!IMPORTANT]
+> This repository is currently **paper-trading and research only**. Phase 4 model results are generated from synthetic fixtures and are **not evidence of expected profitability or live-market performance**.
+
+## Why this project exists
+
+The goal is to build an open-source trading-agent stack where AI/ML can propose ideas, but **cannot bypass deterministic risk controls**. Market research, model training, backtesting and execution are deliberately separated so that every boundary can be audited.
+
+```mermaid
+flowchart LR
+    A[Authorized Historical Data] --> B[Canonical Data Layer]
+    B --> C[Causal Feature Engine]
+    C --> D[ML Models]
+    D --> E[Trade Proposal]
+    F[NSE MCP<br/>Research Context Only] --> E
+    E --> G[Deterministic Risk Engine]
+    G --> H[Paper Execution]
+    H --> I[Portfolio + Audit]
+    J[HDFC SKY<br/>Live Disabled] -. future boundary .-> H
+```
+
+## Project status
+
+| Phase | Milestone | Status |
+| --- | --- | --- |
+| **1** | Paper-trading foundation, API, PostgreSQL/Valkey, deterministic risk engine | ✅ Complete |
+| **2** | Historical-data pipeline, causal features, transaction-cost model, backtesting | ✅ Complete |
+| **3** | Official NSE MCP research integration with strict informational-only boundary | ✅ Complete |
+| **4** | Leakage-safe ML training, model registry, holdout + rolling/expanding walk-forward evaluation | ✅ Complete |
+| **5** | Licensed real NSE historical data and real-data validation | ⏭️ Next |
+
+Tagged milestone: **`v0.4.0-phase4-model-training`**
+
+## Phase 4 model snapshot
+
+The synthetic Random Forest **direction** classifier achieved:
+
+| Evaluation | Precision | Recall | F1 | Brier |
+| --- | ---: | ---: | ---: | ---: |
+| Holdout (85 samples) | 100.0% | **96.9%** | 98.4% | 0.0129 |
+| Rolling fold 0 | 100.0% | **84.6%** | 91.7% | 0.0399 |
+| Rolling fold 1 | 75.0% | **100.0%** | 85.7% | 0.1306 |
+| Rolling fold 2 | 100.0% | **83.3%** | 90.9% | 0.0575 |
+
+The rolling-window recall range is **83.3%–100%** (about **89.3% mean**).
+
+> [!CAUTION]
+> These are **synthetic engineering metrics**. There is no universal trading-industry recall threshold, and these values must not be interpreted as expected live-market accuracy. Read the [Phase 4 Model Card](docs/MODEL_CARD.md) for interpretation, limitations and the real-data acceptance framework.
+
+## Core capabilities
+
+- **Risk-first execution** — deterministic policy checks remain authoritative.
+- **Causal research pipeline** — features and labels enforce chronological boundaries and purging.
+- **Walk-forward ML** — holdout, rolling and expanding-window evaluation without random shuffling.
+- **Model registry** — versioned metadata, checksums, preprocessing state, Git commit and reproducibility information.
+- **Backtesting** — configurable costs/slippage and risk-gated simulated execution.
+- **NSE MCP boundary** — research context is isolated from training data and executable prices.
+- **Paper API** — FastAPI endpoints for health, portfolio, positions, signals, risk, orders and audit.
+- **Open-source runtime** — Python, uv, PostgreSQL, Valkey and rootless Podman.
+
+## Quick start
 
 ```bash
 uv sync --frozen
-uv run python scripts/demo.py
 ./scripts/check.sh
+uv run python scripts/demo.py
 ```
 
-The demo uses a fixed in-session clock and a workspace SQLite database. Repeating
-it reuses the same order ID and demonstrates duplicate rejection. SQLite is only
-a development/test option; the deployed application uses PostgreSQL.
-
-Start the stack with an already configured rootless Podman and Compose provider:
+Start the local stack:
 
 ```bash
 podman compose up --build -d
@@ -27,138 +90,70 @@ curl http://127.0.0.1:8000/health
 curl http://127.0.0.1:8000/ready
 ```
 
-`docker compose` can use the same file. No `.env` or credentials are required for
-this isolated local sandbox. PostgreSQL and Valkey have no published ports.
-The internal container network has no external egress. Do not expose this
-unauthenticated sandbox remotely.
-
-For a dependency-free local API session after `uv sync`:
+Run the complete Phase 4 synthetic experiment:
 
 ```bash
-TRADING_DATABASE_URL=sqlite:///paper.db uv run uvicorn trading_agent.api.app:app --host 127.0.0.1
-```
-
-Paper orders honor the configured market session and real wall clock:
-
-```bash
-curl -X POST http://127.0.0.1:8000/paper/orders \
-  -H 'Content-Type: application/json' \
-  -d '{"client_order_id":"example-1","symbol":"DEMO","side":"buy","quantity":10,"stop_loss":"90"}'
-```
-
-An outside-session request receives an audited rejection. Never disable checks to
-make a demo fill; use `scripts/demo.py` with its explicit synthetic clock.
-
-## Interfaces
-
-| Route | Purpose |
-|---|---|
-| `GET /health` | Process liveness and paper mode |
-| `GET /ready` | Required ledger availability; optional cache status |
-| `GET /portfolio` | Current marked cash, equity and P&L |
-| `GET /positions` | Open long positions |
-| `GET /signals` | Persisted research signals (initially empty) |
-| `GET /risk/status` | Policy limits and daily loss state |
-| `POST /paper/orders` | Risk-gated simulated fill or rejection |
-| `GET /audit` | Most recent audit events |
-
-List routes accept a bounded `limit` (1–1000). Order rejection is HTTP 422;
-unavailable required infrastructure is 503. No live-order route exists. API docs
-are at `/docs`. `ResearchPipeline` and the demo show how to generate signals.
-
-## Design and limitations
-
-Agent proposals pass through deterministic risk evaluation before any fill.
-The paper adapter itself owns that evaluation: a `RiskDecision` cannot be supplied
-as an authorization. Monetary values use Decimal and serialize as strings.
-
-The simulation is long-only equities, whole shares, instant full fills at the
-provider quote, with no fees, slippage or exchange matching. Stop loss is validated
-intent metadata; there is no automatic stop execution yet. Daily P&L uses the last
-observed prior-day equity as its baseline, not an official exchange close. Holiday
-and special-session calendars require official data before realistic use.
-
-See [architecture](docs/ARCHITECTURE.md), [risk](docs/RISK_ENGINE.md),
-[NSE boundary](docs/NSE_INTEGRATION.md), [HDFC SKY boundary](docs/HDFC_SKY_INTEGRATION.md),
-[deployment](docs/DEPLOYMENT.md), [security](docs/SECURITY.md), and
-[implementation report](OVERNIGHT_REPORT.md).
-
-License: Apache-2.0. Runtime and development dependencies are open-source.
-
-## Phase 2 offline research
-
-Phase 2 adds provider-mapped historical imports, immutable raw data, checksummed
-manifests, canonical closed bars, explicit calendars, Parquet partitions, causal
-features, purged walk-forward CPU baselines, configurable transaction costs and a
-risk-gated backtester. It makes no network market-data requests and adds no live
-broker connection. Read [the data pipeline](docs/DATA_PIPELINE.md),
-[backtesting assumptions](docs/BACKTESTING.md), and [Phase 2 report](PHASE2_REPORT.md)
-before using locally supplied licensed data.
-
-Run the complete clearly labelled synthetic workflow with:
-
-```bash
-.venv/bin/python scripts/research_demo.py
-```
-
-It imports `examples/research/SYNTHETIC.csv`, engineers features, trains/evaluates a
-CPU model, and compares SMA and model signals on the same held-out test window.
-Outputs go under ignored `data/backtests/SYNTHETIC-<id>/`. These results verify
-engineering only; they are not evidence of trading profitability.
-
-For official or otherwise authorized data, first make an explicit provider column
-mapping and import it with `.venv/bin/trading-agent data validate` / `data import`. Supply a
-separately verified calendar, contract metadata, risk settings and dated cost rates
-before running a backtest. Expected canonical fields and commands are in
-[DATA_PIPELINE.md](docs/DATA_PIPELINE.md) and [PHASE2_REPORT.md](PHASE2_REPORT.md).
-
-
-## Phase 4: SYNTHETIC model engineering
-
-Phase 4 permits synthetic fixtures only. NSE MCP remains informational and never
-training eligible or an executable price. All execution stays paper. These model
-results are not evidence of expected market performance or live suitability.
-
-Run the complete fixed experiment (all four targets, three CPU models, final
-holdout, expanding/rolling folds, risk-gated baseline comparisons):
-
-```bash
-uv sync --frozen
 uv run python scripts/phase4_training.py --report PHASE4_MODEL_TRAINING_REPORT.md
 ```
 
-Generated datasets, models, predictions, metrics and checksums are stored under
-ignored `data/models/PHASE4-SYNTHETIC-*/`. See the report for the exact run path.
-The `--report` option writes/updates the human-readable report; omit it to retain
-an existing report. The script uses only `examples/research/SYNTHETIC.csv`.
+Generated datasets, models, predictions and backtests are written under ignored `data/` paths. Model binaries are not committed.
 
-Individual commands extend the Phase 2 CLI:
+## Safety architecture
 
-```bash
-uv run trading-agent features build data/datasets/<import-id>/manifest.json   --output data/features/direction.json --target direction --horizon 5
-uv run trading-agent model train data/features/direction.json   --algorithm all --train-size 150 --validation-size 60 --test-size 85 --holdout
-uv run trading-agent model list --registry data/models
-uv run trading-agent model show <model-id> --registry data/models
-uv run trading-agent model evaluate data/models/<model-id> data/features/direction.json   --output data/models/evaluation.json --trust-local-artifact
-uv run trading-agent backtest run data/datasets/<import-id>/manifest.json   --calendar examples/research/calendar.json --config examples/research/backtest.json   --model data/models/<model-id> --trust-local-artifact --output data/backtests/model-run
+The model never places an order directly:
+
+```text
+Prediction → Proposed Signal → Risk Engine → Execution Adapter → Portfolio
 ```
 
-For walk-forward training omit `--holdout`; add `--rolling` for fixed training
-windows. Sizes/step count distinct timestamps before purging. `--holdout` requires
-`--test-size` to equal the remaining timestamp groups. Folds purge label intervals
-at partition and successive test-window boundaries. Final-holdout data must be
-removed from walk-forward development input; the complete script does this.
+Current hard boundaries:
 
-Feature target choices: `direction`, `threshold` (`--threshold`, inclusive),
-`barrier` (`--upper`, `--lower`), `future_return`. Regression uses `--algorithm ridge`,
-`random_forest`, `lightgbm`, or `all`. No hyperparameter search is performed.
-`backtest run --baseline cash|naive|sma` selects a fixed engineering baseline.
-Models use probability >=0.5 or predicted return>0; regression can explicitly use
-`--return-threshold`. `--help` documents every command. Serialized models execute
-Python when loaded; only load your own trusted local artifacts. `model show`
-checks metadata and SHA-256 without deserialization.
+- live brokerage execution is disabled;
+- HDFC SKY integration is a stub/boundary only;
+- NSE MCP is informational only;
+- NSE MCP data is not training eligible;
+- synthetic model scores are not profitability claims;
+- serialized models are loaded only from trusted local artifacts.
 
-Existing feature artifacts without `source_bars` must be rebuilt before training.
-New targets use `targets-v2` (inclusive threshold; unresolved barrier=negative,
-ambiguous bar excluded). New causal distances/range use `research-v2`; old models
-retain their original feature version and reject incompatible new features.
+## Repository map
+
+| Area | Documentation |
+| --- | --- |
+| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Risk engine | [docs/RISK_ENGINE.md](docs/RISK_ENGINE.md) |
+| Data pipeline | [docs/DATA_PIPELINE.md](docs/DATA_PIPELINE.md) |
+| Feature engineering | [docs/FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) |
+| ML pipeline | [docs/ML_PIPELINE.md](docs/ML_PIPELINE.md) |
+| **Model performance & recall** | **[docs/MODEL_CARD.md](docs/MODEL_CARD.md)** |
+| ML evaluation conventions | [docs/ML_EVALUATION.md](docs/ML_EVALUATION.md) |
+| Backtesting | [docs/BACKTESTING.md](docs/BACKTESTING.md) |
+| Transaction costs | [docs/TRANSACTION_COSTS.md](docs/TRANSACTION_COSTS.md) |
+| NSE MCP | [docs/NSE_MCP.md](docs/NSE_MCP.md) |
+| HDFC SKY boundary | [docs/HDFC_SKY_INTEGRATION.md](docs/HDFC_SKY_INTEGRATION.md) |
+| Security | [docs/SECURITY.md](docs/SECURITY.md) |
+| Deployment | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
+
+Detailed Phase 4 experiment output: **[PHASE4_MODEL_TRAINING_REPORT.md](PHASE4_MODEL_TRAINING_REPORT.md)**
+
+## Quality gates
+
+Phase 4 currently validates:
+
+- **203 passed**, 2 isolated-service tests skipped;
+- **91% test coverage**;
+- Ruff formatting/linting;
+- strict mypy checks;
+- package build verification;
+- leakage and reproducibility regression tests.
+
+## Roadmap
+
+**Next: Phase 5 — licensed historical NSE data.**
+
+The next milestone is to replace synthetic engineering fixtures with authorized historical market data while preserving the same canonical ingestion, causal features, purged walk-forward evaluation, model registry and deterministic risk boundary.
+
+Live brokerage execution remains out of scope until real-data evaluation and paper-trading validation are complete.
+
+## License
+
+Apache-2.0.
