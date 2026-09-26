@@ -267,3 +267,108 @@ def test_local_promotion_evidence_must_bind_the_immutable_model(tmp_path):
         )
     )
     assert registry.promote("one", evidence).status == "champion"
+
+
+def test_enrollment_cannot_observe_half_published_model(tmp_path, monkeypatch):
+    from pathlib import Path
+    from threading import Event
+
+    from trading_agent.ml.lifecycle import LifecycleRegistry
+
+    published, attempted, finished, release = Event(), Event(), Event(), Event()
+    original = Path.rename
+    target = tmp_path / "one"
+
+    def paused_rename(path, destination):
+        result = original(path, destination)
+        if destination == target:
+            published.set()
+            assert release.wait(5)
+        return result
+
+    monkeypatch.setattr(Path, "rename", paused_rename)
+
+    def enroll():
+        attempted.set()
+        try:
+            LifecycleRegistry(tmp_path).enroll("one", actor="operator", reason="reviewed")
+        except ValueError:
+            return "already_registered"
+        finally:
+            finished.set()
+        return "enrolled"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        publisher = pool.submit(artifact, tmp_path)
+        assert published.wait(5)
+        enroller = pool.submit(enroll)
+        assert attempted.wait(2)
+        try:
+            assert not finished.wait(0.1)
+        finally:
+            release.set()
+        publisher.result(timeout=5)
+        assert enroller.result(timeout=5) == "already_registered"
+    assert target.is_dir()
+    assert LifecycleRegistry(tmp_path).state("one").status == "challenger"
+
+
+def test_original_published_bundle_cannot_ignore_quarantine(tmp_path):
+    from trading_agent.ml.lifecycle import LifecycleRegistry, require_bundle_usable
+
+    bundle = artifact(tmp_path)
+    require_bundle_usable(bundle)
+    LifecycleRegistry(tmp_path).quarantine("one", reason="severe drift")
+    with pytest.raises(ValueError, match="quarantined"):
+        require_bundle_usable(bundle)
+
+
+def test_failed_publication_cleanup_blocks_concurrent_enrollment(tmp_path, monkeypatch):
+    import shutil
+    from threading import Event
+
+    from trading_agent.ml.lifecycle import LifecycleRegistry
+
+    cleanup, attempted, finished, release = Event(), Event(), Event(), Event()
+    real_remove = shutil.rmtree
+
+    def paused_cleanup(path, *args, **kwargs):
+        if path == tmp_path / "one":
+            cleanup.set()
+            assert release.wait(5)
+        return real_remove(path, *args, **kwargs)
+
+    monkeypatch.setattr(shutil, "rmtree", paused_cleanup)
+    original = LifecycleRegistry._register
+
+    def fail_publication(self, connection, model_id, **kwargs):
+        if kwargs.get("actor", "local-training") == "local-training":
+            raise ValueError("publication registration failed")
+        return original(self, connection, model_id, **kwargs)
+
+    monkeypatch.setattr(LifecycleRegistry, "_register", fail_publication)
+
+    def enroll():
+        attempted.set()
+        try:
+            LifecycleRegistry(tmp_path).enroll("one", actor="operator", reason="reviewed")
+        except ValueError:
+            return "unavailable"
+        finally:
+            finished.set()
+        return "enrolled"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        publisher = pool.submit(artifact, tmp_path)
+        assert cleanup.wait(5)
+        enroller = pool.submit(enroll)
+        assert attempted.wait(2)
+        try:
+            assert not finished.wait(0.1)
+        finally:
+            release.set()
+        with pytest.raises(ValueError, match="registration failed"):
+            publisher.result(timeout=5)
+        assert enroller.result(timeout=5) == "unavailable"
+    assert not (tmp_path / "one").exists()
+    assert LifecycleRegistry(tmp_path).events() == ()

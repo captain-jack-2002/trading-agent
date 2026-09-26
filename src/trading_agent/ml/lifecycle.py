@@ -9,7 +9,7 @@ import hashlib
 import json
 import os
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -78,7 +78,12 @@ class LifecycleRegistry:
         self.path = self.root / "lifecycle.db"
 
     @contextmanager
-    def _transaction(self, *, create: bool = False) -> Iterator[sqlite3.Connection]:
+    def _transaction(
+        self,
+        *,
+        create: bool = False,
+        on_failure: Callable[[], None] | None = None,
+    ) -> Iterator[sqlite3.Connection]:
         self.root.mkdir(parents=True, exist_ok=True)
         try:
             descriptor = os.open(
@@ -90,6 +95,11 @@ class LifecycleRegistry:
             fcntl.flock(descriptor, fcntl.LOCK_EX)
             with self._locked_transaction(create=create) as connection:
                 yield connection
+        except BaseException:
+            # Rollback cleanup must complete before waiting enrollment can acquire this lock.
+            if on_failure is not None:
+                on_failure()
+            raise
         finally:
             os.close(descriptor)
 
@@ -154,9 +164,13 @@ class LifecycleRegistry:
             connection.close()
 
     @contextmanager
-    def publication_gate(self) -> Iterator[sqlite3.Connection]:
+    def publication_gate(
+        self,
+        *,
+        on_failure: Callable[[], None] | None = None,
+    ) -> Iterator[sqlite3.Connection]:
         """Coordinate publication and enrollment with lifecycle mutations."""
-        with self._transaction(create=True) as connection:
+        with self._transaction(create=True, on_failure=on_failure) as connection:
             self._replay(connection)
             yield connection
 

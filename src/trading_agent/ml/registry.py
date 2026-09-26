@@ -30,14 +30,23 @@ def save_model(bundle: ModelBundle, path: Path) -> None:
             )
             if path.exists():
                 raise FileExistsError(path)
-            staging.rename(path)
             from trading_agent.ml.lifecycle import LifecycleRegistry
 
-            try:
-                LifecycleRegistry(path.parent).register(path.name)
-            except BaseException:
-                shutil.rmtree(path)
-                raise
+            registry = LifecycleRegistry(path.parent)
+            published = False
+
+            def cleanup_published() -> None:
+                if published:
+                    shutil.rmtree(path)
+
+            # Enrollment cannot observe either a partial publication or failed cleanup.
+            with registry.publication_gate(on_failure=cleanup_published) as connection:
+                if path.exists():
+                    raise FileExistsError(path)
+                staging.rename(path)
+                published = True
+                registry._register(connection, path.name)
+            bundle.registry_path = path.resolve()
         finally:
             if staging is not None and staging.exists():
                 shutil.rmtree(staging)
