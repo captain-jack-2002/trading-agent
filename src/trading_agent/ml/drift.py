@@ -529,8 +529,18 @@ def evaluate_drift(
             )
         )
 
+    expected_schema: set[str] = set()
     try:
         baseline = MonitoringBaseline.model_validate(metadata.get("monitoring_baseline"))
+        preprocessing = metadata.get("preprocessing", {})
+        if not isinstance(preprocessing, Mapping):
+            raise ValueError("invalid preprocessing schema")
+        excluded = preprocessing.get("excluded_features", ())
+        if not isinstance(excluded, (tuple, list)) or any(
+            not isinstance(name, str) or not name for name in excluded
+        ):
+            raise ValueError("invalid excluded feature schema")
+        expected_schema = {f.name for f in baseline.features} | set(excluded)
         if (
             metadata.get("feature_version") != baseline.feature_version
             or metadata.get("task") != baseline.task
@@ -611,6 +621,8 @@ def evaluate_drift(
         )
     if any(row.feature_version != baseline.feature_version for row in rows):
         fail("feature_version", "Window feature version differs from the training baseline")
+    if any(set(row.values) - expected_schema for row in rows):
+        fail("schema_unexpected", "Window has columns outside the training feature schema")
     for feature in baseline.features:
         if any(feature.name not in row.values for row in rows):
             fail("schema", "Required feature is missing", feature.name)

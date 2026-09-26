@@ -328,3 +328,20 @@ def test_psi_is_sample_size_invariant_and_validates_inputs():
             population_stability_index(left, right)
     with pytest.raises(ValueError):
         population_stability_index([1], [1], epsilon=0)
+
+
+def test_unexpected_feature_columns_fail_closed():
+    observations = rows(list(range(50)))
+    observations[-1] = observations[-1].model_copy(update={"values": {"x": 49, "future_target": 1}})
+    result = evaluate_drift(metadata(list(range(50))), observations)
+    assert result.status == "quarantined"
+    assert any(d.metric == "schema_unexpected" for d in result.diagnostics)
+
+
+@pytest.mark.parametrize(
+    "preprocessing", [None, {"excluded_features": [{}]}, {"excluded_features": "bad"}]
+)
+def test_corrupt_training_schema_metadata_returns_quarantined(preprocessing):
+    meta = metadata(list(range(50)))
+    meta["preprocessing"] = preprocessing
+    assert evaluate_drift(meta, rows(list(range(50)))).status == "quarantined"

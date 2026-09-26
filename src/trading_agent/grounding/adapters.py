@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, Field, model_validator
 
 from trading_agent.config.settings import Settings
 from trading_agent.integrations.nse_mcp.client import MCPResearchContext
@@ -55,6 +55,12 @@ class MarketFields(DomainModel):
     open_interest: Annotated[int, Field(ge=0, strict=True)] | None = None
     implied_volatility: Annotated[float, Field(ge=0, allow_inf_nan=False)] | None = None
 
+    @model_validator(mode="after")
+    def provider_eligibility(self) -> "MarketFields":
+        if "mcp" in self.provider.lower():
+            raise ValueError("MCP is informational only; not trading market-field evidence")
+        return self
+
 
 def _number(value: Decimal | float | int) -> str:
     return format(Decimal(str(value)).normalize(), "f")
@@ -86,6 +92,8 @@ def evidence_from_quote(value: ExecutableMarketQuote) -> ToolEvidence:
         raise TypeError("executable quote adapter requires ExecutableMarketQuote")
     value = ExecutableMarketQuote.model_validate(value.model_dump())
     quote = value.quote
+    if "mcp" in quote.source.lower():
+        raise ValueError("MCP is informational only; not executable quote evidence")
     return _typed(
         quote.source,
         SourceType.EXECUTABLE_QUOTE,
