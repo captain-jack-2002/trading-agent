@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from time import perf_counter
 from typing import Any
 from uuid import uuid4
@@ -21,6 +22,7 @@ from sklearn.preprocessing import StandardScaler  # type: ignore[import-untyped]
 from trading_agent.features.research import FeatureRow
 from trading_agent.ml.audit import SYNTHETIC_WARNING, audit_features
 from trading_agent.ml.dataset import DatasetRow
+from trading_agent.ml.drift import build_monitoring_baseline
 from trading_agent.ml.metrics import classification_metrics, regression_metrics
 from trading_agent.ml.reproducibility import reproducibility
 from trading_agent.ml.split import Split
@@ -31,6 +33,7 @@ class ModelBundle:
     estimator: Any
     features: tuple[str, ...]
     metadata: dict[str, Any]
+    registry_path: Path | None = None
 
 
 def _target(row: DatasetRow, field: str) -> float:
@@ -203,6 +206,16 @@ def train_model(
     audit["label_horizons_purged"] = True
     audit["transformers_fit_training_only"] = True
     bundle = ModelBundle(estimator, features, metadata)
+    training_predictions = (
+        predict_returns(bundle, training) if regression else predict_probabilities(bundle, training)
+    )
+    metadata["monitoring_baseline"] = build_monitoring_baseline(
+        training,
+        features,
+        predictions=training_predictions,
+        labels=[_target(r, target_field) for r in training],
+        task="regression" if regression else "classification",
+    ).model_dump(mode="json")
     metadata["metrics"] = {
         name: evaluate_model(bundle, [rows[i] for i in part])
         for name, part in zip(("validation", "test"), partitions[1:], strict=True)
