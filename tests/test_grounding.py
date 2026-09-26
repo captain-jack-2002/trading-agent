@@ -140,3 +140,25 @@ def test_conflicting_authoritative_facts_abstain_even_with_top_k_one() -> None:
     assert result.status == "abstained"
     assert result.decisions[0].status == "conflicting"
     assert result.decisions[0].value is None
+
+
+def test_source_ingestion_and_empty_vocabulary_fail_closed(tmp_path):
+    with pytest.raises(ValueError):
+        chunk_document(document(), chunk_words=0)
+    with pytest.raises(ValueError):
+        LocalGroundingIndex.from_documents([document(), document()])
+    with pytest.raises(ValueError):
+        build_index(tmp_path, tmp_path / "index", source_type=SourceType.EXECUTABLE_QUOTE)
+    with pytest.raises(FileNotFoundError):
+        build_index(tmp_path / "missing", tmp_path / "index")
+    source = tmp_path / "docs"
+    source.mkdir()
+    (source / "empty.md").write_text("   ")
+    (source / "punctuation.md").write_text("... ! ?")
+    index = build_index(source, tmp_path / "index")
+    assert GroundingService(index).query(request()).status == "abstained"
+    outside = tmp_path / "outside.md"
+    outside.write_text("untrusted model limitations")
+    (source / "linked.md").symlink_to(outside)
+    with pytest.raises(ValueError, match="symlink"):
+        build_index(source, tmp_path / "index")

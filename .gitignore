@@ -26,3 +26,6 @@ htmlcov/
 /data/backtests/
 /data/datasets/
 /data/manifests/
+
+# Phase 5 local indexes and evidence packets.
+/data/grounding/

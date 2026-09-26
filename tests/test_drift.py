@@ -345,3 +345,58 @@ def test_corrupt_training_schema_metadata_returns_quarantined(preprocessing):
     meta = metadata(list(range(50)))
     meta["preprocessing"] = preprocessing
     assert evaluate_drift(meta, rows(list(range(50)))).status == "quarantined"
+
+
+@pytest.mark.parametrize("target", ["target", "direction", "future_return"])
+def test_bare_realized_dataset_labels_are_compared_without_future_leakage(target):
+    from trading_agent.ml.pipeline import predict_probabilities, predict_returns
+
+    data = build_dataset(bars(150), horizon=2)
+    split = walk_forward(data, 70, 25, 25)[0]
+    bundle = train_model(
+        data,
+        split,
+        model_kind="ridge" if target == "future_return" else "logistic",
+        target_field=target,
+    )
+    observed = [data[i] for i in split.train]
+    predictions = (
+        predict_returns(bundle, observed)
+        if target == "future_return"
+        else predict_probabilities(bundle, observed)
+    )
+    labels = [getattr(row, target) for row in observed]
+    result = evaluate_drift(
+        bundle.metadata,
+        observed,
+        predictions=predictions,
+        labels=labels,
+        evaluated_at=max(row.label_end for row in observed),
+    )
+    assert result.status == "healthy"
+    assert all(
+        d.observed == 0 for d in result.diagnostics if d.category in ("calibration", "performance")
+    )
+    incorrect = [value + 1 for value in labels]
+    assert (
+        evaluate_drift(bundle.metadata, observed, predictions=predictions, labels=incorrect).status
+        == "quarantined"
+    )
+
+
+def test_missing_prediction_and_metric_references_fail_closed():
+    values = list(range(50))
+    meta = metadata(values, [0.5] * 50, [0, 1] * 25)
+    meta["monitoring_baseline"]["metrics"] = []
+    assert (
+        evaluate_drift(meta, labeled_window(values, [0.5] * 50, [0, 1] * 25)).status
+        == "quarantined"
+    )
+    meta["monitoring_baseline"]["prediction"] = None
+    assert evaluate_drift(meta, rows(values), predictions=[0.5] * 50).status == "quarantined"
+
+
+def test_realized_label_cannot_precede_prediction_time():
+    timestamp = datetime(2026, 1, 1, tzinfo=UTC)
+    with pytest.raises(ValidationError):
+        RealizedLabel(instrument_id="x", timestamp=timestamp, label_end=timestamp, value=1)

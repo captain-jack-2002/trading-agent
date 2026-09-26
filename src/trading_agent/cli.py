@@ -97,6 +97,9 @@ def parser() -> argparse.ArgumentParser:
     )
     evaluate.add_argument("--partition", choices=("test", "out-of-sample"), default="test")
     evaluate.add_argument("--cost-bps", type=float, default=0)
+    from trading_agent.cli_reliability import add_commands
+
+    add_commands(groups, model_actions)
     nse_mcp = groups.add_parser("nse-mcp", help="Inspect official NSE research MCP servers")
     nse_actions = nse_mcp.add_subparsers(dest="action", required=True)
     nse_actions.add_parser("status", help="Check NSE MCP server availability")
@@ -106,6 +109,23 @@ def parser() -> argparse.ArgumentParser:
 
 
 def dispatch(args: argparse.Namespace) -> dict[str, Any]:
+    if args.group == "grounding":
+        from trading_agent.cli_reliability import grounding_command
+
+        return grounding_command(args)
+    if args.group == "model" and args.action in (
+        "health",
+        "drift",
+        "promote",
+        "quarantine",
+        "retire",
+        "enroll",
+        "challenge",
+        "audit",
+    ):
+        from trading_agent.cli_reliability import model_command
+
+        return model_command(args)
     if args.group == "nse-mcp":
         from trading_agent.config.settings import Settings
         from trading_agent.integrations.nse_mcp import NSEMCPIntegration, config_from_settings
@@ -197,6 +217,21 @@ def main(argv: list[str] | None = None) -> int:
         from trading_agent.integrations.nse_mcp import NSEMCPError
 
         if isinstance(exc, NSEMCPError | ValueError | OSError | KeyError | TypeError):
+            if args.group == "grounding" or (
+                args.group == "model"
+                and args.action
+                in (
+                    "health",
+                    "drift",
+                    "promote",
+                    "quarantine",
+                    "retire",
+                    "enroll",
+                    "challenge",
+                    "audit",
+                )
+            ):
+                command.exit(2, f"error: reliability command failed ({type(exc).__name__})\n")
             command.exit(2, f"error: {exc}\n")
         raise
     print(json.dumps(output, indent=2, sort_keys=True, allow_nan=False))

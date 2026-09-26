@@ -21,6 +21,7 @@ from trading_agent.backtesting.metrics import compute_metrics
 from trading_agent.config.settings import Settings
 from trading_agent.data.calendar import MarketCalendar
 from trading_agent.data.schemas.canonical import CanonicalBar, Contract
+from trading_agent.ml.drift import ModelHealth
 from trading_agent.models.domain import (
     Instrument,
     OrderRequest,
@@ -36,6 +37,7 @@ ZERO = Decimal(0)
 
 class SimulationOrder(Frozen):
     order: OrderRequest
+    model_health: ModelHealth | None = None
     order_type: Literal["market", "limit"] = "market"
     limit_price: PositiveMoney | None = None
     product: Product = "equity_delivery"
@@ -415,6 +417,8 @@ class BacktestEngine:
         )
         portfolio = ledger.snapshot(bar.timestamp)
         reasons.extend(self.risk.evaluate(order, quote, portfolio, seen, bar.timestamp).reasons)
+        if signal.model_health is not None and not signal.model_health.allows_signals:
+            reasons.append("model_health_quarantined")
         volatility = abs(prior[-1].close / prior[-2].close - 1) if len(prior) > 1 else ZERO
         try:
             slipped = self.config.slippage.price(bar.open, order.side, volatility)

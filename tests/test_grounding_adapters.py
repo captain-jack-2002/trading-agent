@@ -204,3 +204,25 @@ def test_numerically_equal_prices_do_not_conflict() -> None:
         )
     )
     assert result.status == "supported"
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        evidence_from_portfolio,
+        evidence_from_inference,
+        evidence_from_metric,
+        evidence_from_market_fields,
+        evidence_from_mcp,
+    ],
+)
+def test_free_form_objects_cannot_enter_authoritative_adapters(factory):
+    with pytest.raises(TypeError):
+        factory({"probability": 0.99, "price": 100, "equity": 100000})
+
+
+def test_free_form_order_and_risk_settings_are_rejected():
+    with pytest.raises(TypeError):
+        evidence_from_order("filled", as_of=NOW)
+    with pytest.raises(TypeError):
+        evidence_from_risk_settings({"max_capital_per_trade": "999999999"}, as_of=NOW)

@@ -196,3 +196,19 @@ def test_model_metric_text_does_not_authorize_numeric_metric() -> None:
     )
     assert result.status == "abstained"
     assert result.decisions[0].value is None
+
+
+def test_registry_metadata_loader_uses_only_metadata_json(tmp_path):
+    root = tmp_path / "docs"
+    root.mkdir()
+    registry = tmp_path / "models"
+    model = registry / "one"
+    model.mkdir(parents=True)
+    (model / "metadata.json").write_text('{"model_id":"one","metrics":{"f1":0.6}}')
+    (model / "model.joblib").write_bytes(b"never deserialize while indexing")
+    documents = load_documents(root, registry=registry)
+    assert len(documents) == 1
+    assert documents[0].source_type == SourceType.REGISTRY_METADATA
+    (model / "metadata.json").write_text("[]")
+    with pytest.raises(ValueError, match="JSON object"):
+        load_documents(root, registry=registry)
