@@ -31,6 +31,13 @@ def save_model(bundle: ModelBundle, path: Path) -> None:
             if path.exists():
                 raise FileExistsError(path)
             staging.rename(path)
+            from trading_agent.ml.lifecycle import LifecycleRegistry
+
+            try:
+                LifecycleRegistry(path.parent).register(path.name)
+            except BaseException:
+                shutil.rmtree(path)
+                raise
         finally:
             if staging is not None and staging.exists():
                 shutil.rmtree(staging)
@@ -51,6 +58,7 @@ def load_model(path: Path, *, trusted: bool = False) -> ModelBundle:
         raise ValueError("invalid model bundle")
     if bundle.metadata != {k: v for k, v in metadata.items() if k != "sha256"}:
         raise ValueError("metadata mismatch")
+    bundle.registry_path = path.resolve()
     return bundle
 
 
