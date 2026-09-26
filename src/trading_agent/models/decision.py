@@ -17,6 +17,7 @@ class DecisionRecord(DomainModel):
     dataset_versions: tuple[str, ...]
     feature_version: str
     features_sha256: str
+    feature_timestamp: AwareDatetime | None = None
     model_id: str | None = None
     model_version: str | None = None
     model_artifact_sha256: str | None = None

@@ -212,6 +212,20 @@ class PaperBrokerAdapter(BrokerExecutionAdapter):
                     evaluated_at=now,
                     client_order_id=order.client_order_id,
                 )
+            # Inference/provider latency can expire previously fresh features. Recheck
+            # inside the ledger transaction after independent quote retrieval, before fill.
+            if is_model and (
+                provenance.feature_timestamp is None
+                or not 0
+                <= (now - provenance.feature_timestamp).total_seconds()
+                <= self.settings.quote_max_age_seconds
+            ):
+                decision = RiskDecision(
+                    approved=False,
+                    reasons=(*decision.reasons, "model_feature_window_stale"),
+                    evaluated_at=now,
+                    client_order_id=order.client_order_id,
+                )
             # Phase 1 ledger supports only equities, even if policy is widened.
             if order.instrument_type != "equity":
                 decision = RiskDecision(

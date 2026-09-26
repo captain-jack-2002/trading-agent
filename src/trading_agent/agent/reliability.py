@@ -83,7 +83,10 @@ class ModelPaperExecutor:
             for row in rows:
                 require_synthetic(row.provenance, row.synthetic)
             record = record.model_copy(
-                update={"features_sha256": digest([r.model_dump(mode="json") for r in rows])}
+                update={
+                    "features_sha256": digest([r.model_dump(mode="json") for r in rows]),
+                    "feature_timestamp": rows[-1].timestamp if rows else None,
+                }
             )
             if grounding_request is not None:
                 request = grounding_request.model_copy(update={"as_of": now})

@@ -206,3 +206,26 @@ def test_prediction_only_drift_latches_quarantine(monitored):
     assert result.outcome == "abstained"
     assert LifecycleRegistry(executor.model_path.parent).state("challenger").status == "quarantined"
     assert broker.portfolio().cash == 100000
+
+
+def test_slow_inference_cannot_execute_with_expired_features_and_new_quote(monitored, monkeypatch):
+    from trading_agent.agent import reliability
+    from trading_agent.nse.mock import MockNSEProvider
+
+    broker, executor, window = monitored
+    current = [NOW]
+    broker.clock = lambda: current[0]
+    broker.provider = MockNSEProvider(clock=lambda: current[0])
+    original = reliability.predict_probabilities
+
+    def delayed_prediction(*args, **kwargs):
+        prediction = original(*args, **kwargs)
+        current[0] += timedelta(seconds=31)
+        return prediction
+
+    monkeypatch.setattr(reliability, "predict_probabilities", delayed_prediction)
+    result = executor.submit(window, order())
+    assert result.outcome == "rejected"
+    assert "model_feature_window_stale" in result.risk_decision.reasons
+    assert result.execution.fill_price is None
+    assert broker.portfolio().cash == 100000
