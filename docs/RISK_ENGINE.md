@@ -44,3 +44,17 @@ the API trust boundary; Python object privacy is not an OS security boundary.
 
 Tests exercise boundaries, stale and future quotes, concurrent submissions,
 restart duplicate recovery, accounting and transaction rollback.
+
+
+## Phase 5A provenance and model health
+
+Manual paper intent keeps the same risk path and existing audit event count;
+`paper_order` now includes hashed decision provenance and typed fact decisions.
+Model-backed paper requests use `ModelPaperExecutor`, which computes its own
+prediction and fresh health and consults current lifecycle before submitting intent.
+Quarantine abstains without creating an order. The registry lock spans the final
+paper decision. The broker rejects untyped/free-form quote output and still obtains
+its own ledger/quotes and calls the unchanged deterministic risk engine. A final
+feature-timestamp check inside the ledger transaction also rejects inputs that
+expired during inference/provider latency. A model score or grounding
+confidence never authorizes a fill.

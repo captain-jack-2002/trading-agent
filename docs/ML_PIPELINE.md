@@ -48,3 +48,31 @@ boolean/noninteger indices, horizon overlaps and mixed target definitions. Input
 rows must share dataset version/provenance/synthetic status; assemble mixed sources
 into an explicitly versioned dataset before training. Label horizon and binary labels
 use strict integers and synthetic status uses a strict boolean at JSON boundaries.
+
+
+## Phase 5A monitoring and lifecycle
+
+Training also persists `monitoring_baseline` from the selected training rows and
+training predictions only. It contains exact compressed distributions, training
+histograms and null/statistical/calibration/performance references. A shifted
+validation/test partition cannot change it. Missing legacy baselines fail closed
+for monitored signal use. Full methodology and policy configuration are in
+[MODEL_DRIFT.md](MODEL_DRIFT.md).
+
+New publications register as challengers. `LifecycleRegistry` verifies immutable
+artifact identity against append-only events, and explicit promotion requires a
+reviewed purged walk-forward and paper/shadow validation attestation. Retraining
+never changes the champion. Quarantine blocks loaded model signal paths and cannot
+be cleared by a healthy monitoring window. See [MODEL_LIFECYCLE.md](MODEL_LIFECYCLE.md).
+
+`ModelPaperExecutor` accepts fresh FeatureRow windows and order intent, computes its
+own prediction and current health, checks lifecycle under a lock through paper
+submission, rechecks feature freshness after inference/quote latency, and records
+structured provenance. It checks every input timestamp is after validation label
+horizons. Required research evidence may be supplied as a
+GroundingRequest; unsupported evidence abstains. Quotes/ledger/risk are independently
+obtained by the broker. Prediction/evaluation functions remain pure offline tools,
+including retrospective diagnosis of quarantined models; they never place orders.
+Retrospective backtests also gate fills on causal-window model health without
+changing deployed lifecycle. Supervised metrics and all synthetic tests remain
+engineering validation only.

@@ -37,3 +37,35 @@ separate temporary directories. Integration consumes their published APIs.
 
 Specification and Phase 1–4 architecture inspected; baseline suite started.
 Final quality-gate results and review findings belong in `../PHASE5_RELIABILITY_REPORT.md`.
+
+
+## Final implementation and review
+
+- Consolidated inherited overlapping grounding drafts into one public immutable
+  contract and one model-backed paper execution path. Phase 1–4 order intent and
+  audit event counts remain compatible; manual provenance is nested in paper_order.
+- Training-only monitoring baselines and health diagnostics, explicit audited
+  lifecycle transitions, CLI, agent grounding, model execution and backtest gates
+  are implemented. Synthetic data remains engineering validation only.
+- Independent read-only review findings were reproduced and fixed: publication/
+  enrollment races (including rollback cleanup), saved-original model quarantine
+  bypass and monitoring snapshot/hash mismatch. Focused tests verify each fix.
+- Additional reproduced failures fixed: tampered evidence/report authority,
+  untyped/MCP quote substitution, MCP feature lineage, unexpected/corrupt schema
+  metadata, sensitive CLI input echoing, and feature expiry during inference/provider
+  latency. No new dependencies or live paths.
+- Ruling: pure retrospective prediction/evaluation remains available for trusted
+  diagnosis; actual model paper proposals check fresh health and live lifecycle.
+  Retrospective backtest health gates simulated fills without changing deployment
+  state. This preserves research evaluation without permitting paper execution
+  around the ModelPaperExecutor and deterministic broker risk boundary.
+- Ruling: Python digest-only promotion is an explicit operator attestation; CLI
+  promotion verifies local model-bound manifests. Neither certifies statistical
+  performance. The cost of incorrect operator approval is an unsuitable champion;
+  subsequent paper health/risk gates still apply. No automatic promotion exists.
+- Final quality gates passed: frozen sync, scripts/check.sh (325 passed, 2 optional
+  service skips; 92% statement coverage), repository-wide Ruff, strict mypy (72
+  source files), package build and artifact verification. Exact results and remaining
+  risks are recorded in ../PHASE5_RELIABILITY_REPORT.md. No deferred review findings.
+- Branch remains phase5-grounding-drift. Separate implementation/fix/documentation
+  commits are retained for review; no merge, tag, release or live execution.

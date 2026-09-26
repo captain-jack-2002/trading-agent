@@ -6,9 +6,9 @@
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Execution](https://img.shields.io/badge/Execution-Paper%20Only-F59E0B)
-![Phase](https://img.shields.io/badge/Latest-v0.4.0-7C3AED)
-![Tests](https://img.shields.io/badge/Tests-203%20passed-22C55E)
-![Coverage](https://img.shields.io/badge/Coverage-91%25-22C55E)
+![Phase](https://img.shields.io/badge/Phase-5A-7C3AED)
+![Tests](https://img.shields.io/badge/Tests-325%20passed-22C55E)
+![Coverage](https://img.shields.io/badge/Coverage-92%25-22C55E)
 ![License](https://img.shields.io/badge/License-Apache--2.0-blue)
 
 **Deterministic risk controls · Causal ML features · Walk-forward validation · NSE research context · Reproducible model registry**
@@ -43,7 +43,8 @@ flowchart LR
 | **2** | Historical-data pipeline, causal features, transaction-cost model, backtesting | ✅ Complete |
 | **3** | Official NSE MCP research integration with strict informational-only boundary | ✅ Complete |
 | **4** | Leakage-safe ML training, model registry, holdout + rolling/expanding walk-forward evaluation | ✅ Complete |
-| **5** | Licensed real NSE historical data and real-data validation | ⏭️ Next |
+| **5A** | Local grounding, fact guardrails, drift health, audited model lifecycle | ✅ Implemented on `phase5-grounding-drift` for review |
+| **5B** | Licensed real NSE historical data and real-data validation | ⏭️ Next |
 
 Tagged milestone: **`v0.4.0-phase4-model-training`**
 
@@ -65,6 +66,8 @@ The rolling-window recall range is **83.3%–100%** (about **89.3% mean**).
 
 ## Core capabilities
 
+- **Local grounding** — deterministic TF-IDF evidence packets, authoritative fact policy and explicit abstention.
+- **Model reliability** — training-only drift baselines, latched quarantine and explicit audited champion/challenger promotion.
 - **Risk-first execution** — deterministic policy checks remain authoritative.
 - **Causal research pipeline** — features and labels enforce chronological boundaries and purging.
 - **Walk-forward ML** — holdout, rolling and expanding-window evaluation without random shuffling.
@@ -120,6 +123,10 @@ Current hard boundaries:
 | Area | Documentation |
 | --- | --- |
 | Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Grounding and fact policy | [docs/GROUNDING.md](docs/GROUNDING.md) |
+| Model drift | [docs/MODEL_DRIFT.md](docs/MODEL_DRIFT.md) |
+| Model lifecycle | [docs/MODEL_LIFECYCLE.md](docs/MODEL_LIFECYCLE.md) |
+| Phase 5A reliability report | [PHASE5_RELIABILITY_REPORT.md](PHASE5_RELIABILITY_REPORT.md) |
 | Risk engine | [docs/RISK_ENGINE.md](docs/RISK_ENGINE.md) |
 | Data pipeline | [docs/DATA_PIPELINE.md](docs/DATA_PIPELINE.md) |
 | Feature engineering | [docs/FEATURE_ENGINEERING.md](docs/FEATURE_ENGINEERING.md) |
@@ -137,10 +144,10 @@ Detailed Phase 4 experiment output: **[PHASE4_MODEL_TRAINING_REPORT.md](PHASE4_M
 
 ## Quality gates
 
-Phase 4 currently validates:
+Phase 5A validates:
 
-- **203 passed**, 2 isolated-service tests skipped;
-- **91% test coverage**;
+- **325 passed**, 2 isolated-service tests skipped;
+- **92% test coverage**;
 - Ruff formatting/linting;
 - strict mypy checks;
 - package build verification;
@@ -148,7 +155,19 @@ Phase 4 currently validates:
 
 ## Roadmap
 
-**Next: Phase 5 — licensed historical NSE data.**
+**Phase 5A: reliability implemented for review; next: Phase 5B licensed historical NSE data.**
+
+Phase 5A adds local evidence retrieval, fail-closed fact policies, training-only
+drift baselines, quarantine enforcement, decision provenance and explicit model
+promotion. It has no mandatory cloud or LLM dependency and keeps paper-only execution.
+
+```bash
+uv run trading-agent grounding index --source docs --output data/grounding/index
+uv run trading-agent grounding query "model limitations" --index data/grounding/index
+uv run trading-agent model health MODEL --registry data/models
+uv run trading-agent model drift MODEL --window window.json --trust-local-artifact
+uv run trading-agent model audit --registry data/models
+```
 
 The next milestone is to replace synthetic engineering fixtures with authorized historical market data while preserving the same canonical ingestion, causal features, purged walk-forward evaluation, model registry and deterministic risk boundary.
 

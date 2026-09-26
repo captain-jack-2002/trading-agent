@@ -102,3 +102,25 @@ NSE MCP remains **informational only**, is not training eligible, and is not an 
 ## Source of truth
 
 Exact per-fold metrics, target definitions, dataset checksums, feature versions, preprocessing metadata, model IDs and backtest outputs are in [PHASE4_MODEL_TRAINING_REPORT.md](../PHASE4_MODEL_TRAINING_REPORT.md).
+
+
+## Phase 5A reliability qualification
+
+The Phase 4 figures above remain historical synthetic engineering observations.
+Phase 5A does not recompute those experiments or claim expected trading returns.
+Models now carry training-only distribution/calibration/performance references.
+Healthy/watch/quarantined diagnostics describe observed reliability under a
+versioned policy, not economic usefulness. Training-reference metrics are optimistic
+in-sample diagnostics; they do not replace purged out-of-sample validation.
+
+Feature/schema integrity and current model health gate model-backed paper proposals.
+Quarantined models cannot create paper orders, even with high-confidence predictions.
+A healthy model with a high-confidence score and valid quote still faces every
+existing deterministic risk policy. Research evidence cannot manufacture prices,
+account facts or model metrics. NSE MCP remains informational-only.
+
+Newly trained artifacts are challengers. Reviewed explicit promotion is required
+to become champion; monitoring never automatically promotes or deploys retraining.
+A quarantined artifact remains quarantined; create and validate a new challenger.
+See [MODEL_DRIFT.md](MODEL_DRIFT.md), [MODEL_LIFECYCLE.md](MODEL_LIFECYCLE.md) and
+[GROUNDING.md](GROUNDING.md) for exact policy, methodology and limitations.

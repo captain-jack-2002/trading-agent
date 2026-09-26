@@ -54,3 +54,13 @@ The agent orchestration can request a specifically selected tool through `NSEMCP
 Timeout, transport, protocol, malformed response, unknown tool, and schema validation failures are surfaced as integration errors or an unavailable context. They do not bypass risk checks, change the execution mode, or fabricate market data. Discovery results can change at any time. The SDK response is retained as structured JSON or content blocks without mapping it to licensed historical bars or executable quotes. CM Market timeliness and server-provided field semantics may vary; consumers must inspect discovered metadata and the response itself.
 
 Normal tests use in-process fixtures and do not contact NSE. Live connectivity is opt-in and reports actual discoveries separately in `PHASE3_NSE_MCP_REPORT.md`.
+
+
+## Phase 5A grounding boundary
+
+`grounding.evidence_from_mcp` accepts available typed MCP context as ephemeral
+informational evidence. It attaches no authoritative numeric observations, always
+sets training/executable eligibility false, and applies freshness filtering.
+Unavailable context returns no evidence. MCP text cannot satisfy executable-price,
+volume/OI/derivative or other trading-critical fact requirements. Grounding and drift
+commands do not discover/call NSE tools or introduce automatic network fallback.
